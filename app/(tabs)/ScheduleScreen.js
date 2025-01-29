@@ -5,7 +5,7 @@ const ScheduleScreen = () => {
   // Get the current date
   const today = new Date();
   
-  // Format the current date as "Day Mon DD, YYYY"
+  // Format the current date as "DAY MON DD, YYYY"
   const formattedDate = today.toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
@@ -137,11 +137,11 @@ const styles = StyleSheet.create({
   timeSlot: {
     borderBottomWidth: 1,
     borderBottomColor: "#FF7F50",
-    height: 40,
+    height: 120,
     justifyContent: "center",
   },
   timeText: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#333",
   },
 });
