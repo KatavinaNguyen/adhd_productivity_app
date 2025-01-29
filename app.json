@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "HelloWorld",
-    "slug": "expo-template-default",
+    "name": "capstone",
+    "slug": "capstone",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -9,13 +9,15 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.katnguyenorg.capstone"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.katnguyenorg.capstone"
     },
     "web": {
       "bundler": "metro",
@@ -36,6 +38,18 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f7c60fbf-47d4-4b35-bd3e-29df7efa9bdc"
+      }
+    },
+    "owner": "katnguyen-org",
+    "updates": {
+      "url": "https://u.expo.dev/f7c60fbf-47d4-4b35-bd3e-29df7efa9bdc"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }
