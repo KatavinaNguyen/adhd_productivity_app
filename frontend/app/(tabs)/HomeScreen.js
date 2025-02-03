@@ -1,29 +1,27 @@
 import React from "react";
-import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
 
 const HomeScreen = () => {
   const handleGoogleSignIn = () => {
-    // Logic for Google Sign-In goes here
     console.log("Google Sign-In button pressed");
   };
- 
+
   return (
     <View style={styles.container}>
-      {/* Logo and Title */}
       <View style={styles.logoContainer}>
         <Text style={styles.title}>TINY TASKS</Text>
-        <View style={styles.iconContainer}>
+        <View style={styles.iconContainer}>  
           <View style={styles.iconBox}>
             <Text style={styles.checkmark}>✔</Text>
           </View>
         </View>
         <Text style={styles.subtitle}>ADHD PRODUCTIVITY APP</Text>
       </View>
-
-      {/* Google Sign-In Button */}
       <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn}>
         <Image
-          source={require('../../assets/images/google.png')}
+          source={{
+            uri: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Google_%22G%22_Logo.svg/512px-Google_%22G%22_Logo.svg.png",
+          }}
           style={styles.googleLogo}
         />
         <Text style={styles.googleButtonText}>Sign in with Google</Text>
@@ -73,13 +71,17 @@ const styles = StyleSheet.create({
   googleButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFF",
-    paddingVertical: 12,
-    paddingHorizontal: 25,
-    borderRadius: 10,
+    backgroundColor: "#fff",
+    borderColor: "#ddd",
     borderWidth: 1,
-    borderColor: "#DDD",
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   googleLogo: {
     width: 24,
@@ -89,6 +91,7 @@ const styles = StyleSheet.create({
   googleButtonText: {
     fontSize: 16,
     color: "#333",
+    fontWeight: "500",
   },
 });
 
