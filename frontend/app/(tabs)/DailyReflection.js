@@ -1,11 +1,11 @@
 import React from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
   Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 const DailyReflection = () => {
@@ -58,7 +58,7 @@ const DailyReflection = () => {
         <TouchableOpacity style={styles.actionButton}>
           <Text style={styles.actionButtonText}>Download PDF</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity Link href="/ScheduleScreen" style={styles.actionButton}>
           <Text style={styles.actionButtonText}>Load New Day</Text>
         </TouchableOpacity>
       </View>

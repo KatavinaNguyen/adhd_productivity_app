@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const FocusMode = () => {
   return (
@@ -28,7 +28,7 @@ const FocusMode = () => {
       <TouchableOpacity style={styles.finishedButton}>
         <Text style={styles.buttonText}>Finished!</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.exitButton}>
+      <TouchableOpacity Link href="/ScheduleScreen" style={styles.exitButton}>
         <Text style={styles.exitButtonText}>Exit</Text>
       </TouchableOpacity>
     </View>
