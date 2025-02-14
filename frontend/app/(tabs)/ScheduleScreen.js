@@ -17,12 +17,12 @@ const ScheduleScreen = () => {
     <View style={styles.container}>
       {/* Header Section */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerIcon}>
+        <TouchableOpacity Link href="/HomeScreen" style={styles.headerIcon}>
           <Text style={styles.iconText}>←</Text>
         </TouchableOpacity>
         <View style={styles.headerButtons}>
           <TouchableOpacity>
-            <Text style={styles.iconText}>⏱️</Text>
+            <Text Link href="/FocusMode" style={styles.iconText}>⏱️</Text>
           </TouchableOpacity>
           <TouchableOpacity>
             <Text style={styles.iconText}>+</Text>

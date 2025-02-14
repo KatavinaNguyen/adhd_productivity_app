@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const PomodoroMode = () => {
   const [isPomodoro, setIsPomodoro] = useState(true); // Switch between Pomodoro and Break
@@ -75,8 +75,8 @@ const PomodoroMode = () => {
       </View>
 
       {/* Exit Button */}
-      <TouchableOpacity style={styles.exitButton}>
-        <Text style={styles.exitButtonText}>Exit</Text>
+      <TouchableOpacity Link href="/ScheduleScreen" style={styles.exitButton}>
+          <Text style={styles.exitButtonText}>Exit</Text>
       </TouchableOpacity>
     </View>
   );
