@@ -1,10 +1,45 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
+import { GoogleSignin, GoogleSigninButton, statusCodes } from '@react-native-google-signin/google-signin';
 
-const HomeScreen = () => {
-  const handleGoogleSignIn = () => {
+GoogleSignin.configure({
+  webClientId: '1061066222675-jvt6ob80rvjuva0qknmhnh76gf5jve6i.apps.googleusercontent.com', // client ID of type WEB for your server. Required to get the `idToken` on the user object, and for offline access.
+  scopes: ['https://www.googleapis.com/auth/drive.readonly'], // what API you want to access on behalf of the user, default is email and profile
+  offlineAccess: true, // if you want to access Google API on behalf of the user FROM YOUR SERVER
+  forceCodeForRefreshToken: true, // [Android] related to `serverAuthCode`, read the docs link below *.
+  iosClientId: '1061066222675-gjbsfevvduqbbv499i15i92ir1bm3o2a.apps.googleusercontent.com', // [iOS] if you want to specify the client ID of type iOS (otherwise, it is taken from GoogleService-Info.plist)
+});
+
+export default function HomeScreen(){
+
+  let currentUser = null;
+
+  const handleGoogleSignIn = async () => {
     console.log("Google Sign-In button pressed");
+    try {
+      await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
+      currentUser = response.data;
+      console.log(currentUser);
+    } catch (error) {
+      if (isErrorWithCode(error)) {
+        switch (error.code) {
+          case statusCodes.IN_PROGRESS:
+            // operation (eg. sign in) already in progress
+            break;
+          case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
+            // Android only, play services not available or outdated
+            break;
+          default:
+          // some other error happened
+        }
+      } else {
+        // an error that's not related to google sign in occurred
+        console.log(error);
+      }
+    }  
   };
+
 
   return (
     <View style={styles.container}>
@@ -17,15 +52,7 @@ const HomeScreen = () => {
         </View>
         <Text style={styles.subtitle}>ADHD PRODUCTIVITY APP</Text>
       </View>
-      <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn}>
-        <Image
-          source={{
-            uri: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Google_%22G%22_Logo.svg/512px-Google_%22G%22_Logo.svg.png",
-          }}
-          style={styles.googleLogo}
-        />
-        <Text style={styles.googleButtonText}>Sign in with Google</Text>
-      </TouchableOpacity>
+      <GoogleSigninButton size={GoogleSigninButton.Size.Wide} color={GoogleSigninButton.Color.Dark} onPress={handleGoogleSignIn} />
     </View>
   );
 };
@@ -95,4 +122,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default HomeScreen;
+

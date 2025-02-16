@@ -12,13 +12,15 @@
       },
       "ios": {
         "image": "latest"
-      }
+      },
+      "channel": "development"
     },
     "development-simulator": {
       "extends": "development",
       "ios": {
         "simulator": true
-      }
+      },
+      "channel": "development-simulator"
     },
     "preview": {
       "distribution": "internal",

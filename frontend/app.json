@@ -25,6 +25,10 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      [
+        "@react-native-google-signin/google-signin",
+        {"iosUrlScheme": "com.googleusercontent.apps.1061066222675-gjbsfevvduqbbv499i15i92ir1bm3o2a"}
+      ],
       "expo-router",
       [
         "expo-splash-screen",
@@ -39,17 +43,21 @@
     "experiments": {
       "typedRoutes": true
     },
-    "extra": {
-      "eas": {
-        "projectId": "f7c60fbf-47d4-4b35-bd3e-29df7efa9bdc"
-      }
-    },
     "owner": "katnguyen-org",
     "updates": {
       "url": "https://u.expo.dev/f7c60fbf-47d4-4b35-bd3e-29df7efa9bdc"
     },
-    "runtimeVersion": {
-      "policy": "appVersion"
-    }
+    "expo": {
+      "runtimeVersion": "1.0.0"
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "f7c60fbf-47d4-4b35-bd3e-29df7efa9bdc"
+      }
+    },
+    "runtimeVersion": "1.0.0"
   }
 }
