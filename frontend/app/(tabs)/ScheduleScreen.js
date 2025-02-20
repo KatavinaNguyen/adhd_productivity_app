@@ -1,7 +1,10 @@
 import React from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useRouter } from "expo-router";
+
 
 const ScheduleScreen = () => {
+  const router = useRouter();
   // Get the current date
   const today = new Date();
   
@@ -17,20 +20,20 @@ const ScheduleScreen = () => {
     <View style={styles.container}>
       {/* Header Section */}
       <View style={styles.header}>
-        <TouchableOpacity Link href="/HomeScreen" style={styles.headerIcon}>
+        <TouchableOpacity style={styles.headerIcon} onPress={() => router.push("/HomeScreen")}>
           <Text style={styles.iconText}>←</Text>
         </TouchableOpacity>
         <View style={styles.headerButtons}>
-          <TouchableOpacity>
-            <Text Link href="/FocusMode" style={styles.iconText}>⏱️</Text>
+          <TouchableOpacity onPress={() => router.push("/FocusMode")}>
+            <Text style={styles.iconText}>⏱️</Text>
           </TouchableOpacity>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("/StampBook")}>
             <Text style={styles.iconText}>📓</Text>
           </TouchableOpacity>
           <TouchableOpacity>
             <Text style={styles.iconText}>+</Text>
           </TouchableOpacity>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("/Settings")}>
             <Text style={styles.iconText}>⚙️</Text>
           </TouchableOpacity>
         </View>
@@ -56,6 +59,12 @@ const ScheduleScreen = () => {
             <Text style={styles.timeText}>{time}</Text>
           </View>
         ))}
+        {/* End Day Button */}
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/DailyReflection")}>
+            <Text style={styles.actionButtonText}>End Day</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </View>
   );
@@ -146,6 +155,24 @@ const styles = StyleSheet.create({
   timeText: {
     fontSize: 12,
     color: "#333",
+  },
+  buttonContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginVertical: 20,
+  },
+  actionButton: {
+    backgroundColor: "#FF7F50",
+    paddingVertical: 15,
+    borderRadius: 8,
+    flex: 1,
+    alignItems: "center",
+    marginHorizontal: 50,
+  },
+  actionButtonText: {
+    fontSize: 16,
+    color: "#FFF",
+    fontWeight: "bold",
   },
 });
 

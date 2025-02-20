@@ -1,7 +1,10 @@
 import React, { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useRouter } from 'expo-router';
 
 const PomodoroMode = () => {
+  const router = useRouter();
+
   const [isPomodoro, setIsPomodoro] = useState(true); // Switch between Pomodoro and Break
   const [timer, setTimer] = useState(25 * 60); // 25 minutes in seconds
 
@@ -15,11 +18,11 @@ const PomodoroMode = () => {
     <View style={styles.container}>
       {/* Tab Selection */}
       <View style={styles.tabContainer}>
-        <TouchableOpacity style={[styles.tab, styles.activeTab]}>
-          <Text style={[styles.tabText, styles.activeTabText]}>Focus</Text>
+        <TouchableOpacity style={styles.tab} onPress={() => router.push("/FocusMode")}>
+          <Text style={styles.tabText}>Focus</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tab}>
-          <Text style={styles.tabText}>Pomo</Text>
+        <TouchableOpacity style={[styles.tab, styles.activeTab]}>
+          <Text style={[styles.tabText, styles.activeTabText]}>Pomo</Text>
         </TouchableOpacity>
       </View>
 
@@ -75,7 +78,7 @@ const PomodoroMode = () => {
       </View>
 
       {/* Exit Button */}
-      <TouchableOpacity Link href="/ScheduleScreen" style={styles.exitButton}>
+      <TouchableOpacity style={styles.exitButton} onPress={() => router.push("/ScheduleScreen")}>
           <Text style={styles.exitButtonText}>Exit</Text>
       </TouchableOpacity>
     </View>

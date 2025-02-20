@@ -7,8 +7,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
+import { useRouter } from 'expo-router';
+ 
 const DailyReflection = () => {
+  const router = useRouter();
   const tasks = [
     "Data Structures HW",
     "Grocery Shopping",
@@ -58,7 +60,7 @@ const DailyReflection = () => {
         <TouchableOpacity style={styles.actionButton}>
           <Text style={styles.actionButtonText}>Download PDF</Text>
         </TouchableOpacity>
-        <TouchableOpacity Link href="/ScheduleScreen" style={styles.actionButton}>
+        <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/ScheduleScreen")}>
           <Text style={styles.actionButtonText}>Load New Day</Text>
         </TouchableOpacity>
       </View>

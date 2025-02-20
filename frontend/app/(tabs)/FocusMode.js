@@ -1,7 +1,9 @@
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useRouter } from "expo-router";
 
 const FocusMode = () => {
+  const router = useRouter();
   return (
     <View style={styles.container}>
       {/* Tab Selection */}
@@ -9,7 +11,7 @@ const FocusMode = () => {
         <TouchableOpacity style={[styles.tab, styles.activeTab]}>
           <Text style={[styles.tabText, styles.activeTabText]}>Focus</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tab}>
+        <TouchableOpacity style={styles.tab} onPress={() => router.push("/PomodoroMode")}>
           <Text style={styles.tabText}>Pomo</Text>
         </TouchableOpacity>
       </View>
@@ -28,7 +30,7 @@ const FocusMode = () => {
       <TouchableOpacity style={styles.finishedButton}>
         <Text style={styles.buttonText}>Finished!</Text>
       </TouchableOpacity>
-      <TouchableOpacity Link href="/ScheduleScreen" style={styles.exitButton}>
+      <TouchableOpacity style={styles.exitButton} onPress={() => router.push("/ScheduleScreen")}>
         <Text style={styles.exitButtonText}>Exit</Text>
       </TouchableOpacity>
     </View>

@@ -7,8 +7,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useRouter } from 'expo-router';
 
 const StampBook = () => {
+  const router = useRouter();
   
   return (
     <View style={styles.container}>
@@ -34,7 +36,7 @@ const StampBook = () => {
 
       {/* Home Button */}
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/ScheduleScreen")}>
           <Text style={styles.actionButtonText}>Return to Dashboard</Text>
         </TouchableOpacity>
       </View>

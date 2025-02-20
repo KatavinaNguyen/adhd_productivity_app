@@ -7,8 +7,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useRouter } from 'expo-router';
 
 const Settings = () => {
+  const router = useRouter();
   const tasks = [
     "Data Structures HW",
     "Grocery Shopping",
@@ -40,7 +42,7 @@ const Settings = () => {
 
       {/* Home Button */}
         <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.actionButton}>
+            <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/ScheduleScreen")}>
                 <Text style={styles.actionButtonText}>Return to Dashboard</Text>
             </TouchableOpacity>
         </View>
