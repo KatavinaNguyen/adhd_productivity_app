@@ -25,6 +25,9 @@ const ScheduleScreen = () => {
             <Text Link href="/FocusMode" style={styles.iconText}>⏱️</Text>
           </TouchableOpacity>
           <TouchableOpacity>
+            <Text style={styles.iconText}>📓</Text>
+          </TouchableOpacity>
+          <TouchableOpacity>
             <Text style={styles.iconText}>+</Text>
           </TouchableOpacity>
           <TouchableOpacity>
