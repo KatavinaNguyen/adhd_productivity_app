@@ -47,17 +47,8 @@
     "updates": {
       "url": "https://u.expo.dev/f7c60fbf-47d4-4b35-bd3e-29df7efa9bdc"
     },
-    "expo": {
-      "runtimeVersion": "1.0.0"
-    },
-    "extra": {
-      "router": {
-        "origin": false
-      },
-      "eas": {
-        "projectId": "f7c60fbf-47d4-4b35-bd3e-29df7efa9bdc"
-      }
-    },
-    "runtimeVersion": "1.0.0"
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
   }
 }

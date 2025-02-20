@@ -8,8 +8,8 @@ import {
   View,
 } from "react-native";
 import { useRouter } from 'expo-router';
- 
-const DailyReflection = () => {
+
+const Settings = () => {
   const router = useRouter();
   const tasks = [
     "Data Structures HW",
@@ -24,46 +24,28 @@ const DailyReflection = () => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerText}>Daily Reflection</Text>
+        <Text style={styles.headerText}>Settings</Text>
       </View>
 
-      {/* Focus Mode Tasks */}
+      {/* Settings List */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Focus Mode</Text>
-        <ScrollView contentContainerStyle={styles.taskList}>
-          {tasks.map((task, index) => (
-            <TouchableOpacity key={index} style={styles.taskButton}>
-              <Text style={styles.taskText}>{task}</Text>
+      <TouchableOpacity style={styles.listButton}>
+            <Text style={styles.listText}>Account</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.listButton}>
+            <Text style={styles.listText}>Notifications</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.listButton}>
+            <Text style={styles.listText}>Other</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Home Button */}
+        <View style={styles.buttonContainer}>
+            <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/ScheduleScreen")}>
+                <Text style={styles.actionButtonText}>Return to Dashboard</Text>
             </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* Rewards Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Rewards</Text>
-        <View style={styles.rewardsContainer}>
-          {Array(12)
-            .fill()
-            .map((_, index) => (
-              <Image
-                key={index}
-                source={require("../../assets/images/reward-icon.png")} 
-                style={styles.rewardImage}
-              />
-            ))}
         </View>
-      </View>
-
-      {/* Buttons */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.actionButton}>
-          <Text style={styles.actionButtonText}>Download PDF</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/ScheduleScreen")}>
-          <Text style={styles.actionButtonText}>Load New Day</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 };
@@ -91,7 +73,7 @@ const styles = StyleSheet.create({
   section: {
     backgroundColor: "#F8F8F8",
     borderRadius: 12,
-    padding: 16,
+    padding: 23,
     marginBottom: 20,
   },
   sectionTitle: {
@@ -104,14 +86,15 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     gap: 10,
   },
-  taskButton: {
+  listButton: {
     backgroundColor: "#ECECEC",
-    paddingVertical: 12,
+    paddingVertical: 25,
     borderRadius: 8,
     alignItems: "center",
+    marginVertical: 10,
   },
-  taskText: {
-    fontSize: 14,
+  listText: {
+    fontSize: 18,
     color: "#333",
   },
   rewardsContainer: {
@@ -136,6 +119,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     marginHorizontal: 5,
+    bottom: 0,
   },
   actionButtonText: {
     fontSize: 16,
@@ -144,4 +128,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default DailyReflection;
+export default Settings;

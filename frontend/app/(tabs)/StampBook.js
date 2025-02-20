@@ -8,42 +8,21 @@ import {
   View,
 } from "react-native";
 import { useRouter } from 'expo-router';
- 
-const DailyReflection = () => {
-  const router = useRouter();
-  const tasks = [
-    "Data Structures HW",
-    "Grocery Shopping",
-    "Team Meeting",
-    "Walk the Dog",
-    "Volunteer Shift",
-    "Library Book Return",
-  ];
 
+const StampBook = () => {
+  const router = useRouter();
+  
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerText}>Daily Reflection</Text>
+        <Text style={styles.headerText}>Tiny Stamps</Text>
       </View>
 
-      {/* Focus Mode Tasks */}
+      {/* Stamps */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Focus Mode</Text>
-        <ScrollView contentContainerStyle={styles.taskList}>
-          {tasks.map((task, index) => (
-            <TouchableOpacity key={index} style={styles.taskButton}>
-              <Text style={styles.taskText}>{task}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* Rewards Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Rewards</Text>
         <View style={styles.rewardsContainer}>
-          {Array(12)
+          {Array(28)
             .fill()
             .map((_, index) => (
               <Image
@@ -55,13 +34,10 @@ const DailyReflection = () => {
         </View>
       </View>
 
-      {/* Buttons */}
+      {/* Home Button */}
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.actionButton}>
-          <Text style={styles.actionButtonText}>Download PDF</Text>
-        </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/ScheduleScreen")}>
-          <Text style={styles.actionButtonText}>Load New Day</Text>
+          <Text style={styles.actionButtonText}>Return to Dashboard</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -100,20 +76,6 @@ const styles = StyleSheet.create({
     color: "#FF7F50",
     marginBottom: 12,
   },
-  taskList: {
-    flexDirection: "column",
-    gap: 10,
-  },
-  taskButton: {
-    backgroundColor: "#ECECEC",
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  taskText: {
-    fontSize: 14,
-    color: "#333",
-  },
   rewardsContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -121,8 +83,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   rewardImage: {
-    width: 40,
-    height: 40,
+    width: 70,
+    height: 70,
   },
   buttonContainer: {
     flexDirection: "row",
@@ -144,4 +106,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default DailyReflection;
+export default StampBook;

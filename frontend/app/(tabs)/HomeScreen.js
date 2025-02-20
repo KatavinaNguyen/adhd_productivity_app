@@ -8,11 +8,13 @@ GoogleSignin.configure({
   offlineAccess: true, // if you want to access Google API on behalf of the user FROM YOUR SERVER
   forceCodeForRefreshToken: true, // [Android] related to `serverAuthCode`, read the docs link below *.
   iosClientId: '1061066222675-gjbsfevvduqbbv499i15i92ir1bm3o2a.apps.googleusercontent.com', // [iOS] if you want to specify the client ID of type iOS (otherwise, it is taken from GoogleService-Info.plist)
+  //androidClientId: '1061066222675-1njke5rar4218ud6fjl6p4fk0t8t72ou.apps.googleusercontent.com',
 });
 
 export default function HomeScreen(){
 
   let currentUser = null;
+  currentUser = "hi";
 
   const handleGoogleSignIn = async () => {
     console.log("Google Sign-In button pressed");

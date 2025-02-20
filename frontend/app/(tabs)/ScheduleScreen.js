@@ -1,7 +1,19 @@
-import React from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useState } from "react";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert, Modal, Pressable, TextInput, Touchable } from "react-native";
+import { useRouter } from "expo-router";
 
 const ScheduleScreen = () => {
+  const router = useRouter();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [taskName, setTaskName] = useState("Task Name");
+
+  const handleConfirm = () => {
+    //Test output
+    console.log("Added task:", taskName);
+
+    setModalVisible(false);
+  };
+  
   // Get the current date
   const today = new Date();
   
@@ -17,21 +29,86 @@ const ScheduleScreen = () => {
     <View style={styles.container}>
       {/* Header Section */}
       <View style={styles.header}>
-        <TouchableOpacity Link href="/HomeScreen" style={styles.headerIcon}>
+        <TouchableOpacity style={styles.headerIcon} onPress={() => router.push("/HomeScreen")}>
           <Text style={styles.iconText}>←</Text>
         </TouchableOpacity>
         <View style={styles.headerButtons}>
-          <TouchableOpacity>
-            <Text Link href="/FocusMode" style={styles.iconText}>⏱️</Text>
+          <TouchableOpacity onPress={() => router.push("/FocusMode")}>
+            <Text style={styles.iconText}>⏱️</Text>
           </TouchableOpacity>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("/StampBook")}>
+            <Text style={styles.iconText}>📓</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setModalVisible(true)}>
             <Text style={styles.iconText}>+</Text>
           </TouchableOpacity>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("/Settings")}>
             <Text style={styles.iconText}>⚙️</Text>
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Adding Task Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            {/* Exit */}
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.button, styles.exitButton]}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.buttonText}>X</Text>
+              </TouchableOpacity>
+            </View>
+            {/* Title */}
+            <Text style={styles.modalTitle}>Create a Task</Text>
+            {/* Text Input */}
+            <TextInput
+              style={styles.input}
+              placeholder="Task Name"
+              value={taskName}
+              onChangeText={setTaskName}
+            />
+            {/* Priority Settings */}
+            <View style={styles.buttonRow} >
+              <TouchableOpacity style={styles.priorityButton}>
+                <Text style={styles.priorityText}>!</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.priorityButton}>
+                <Text style={styles.priorityText}>!!</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.priorityButton}>
+                <Text style={styles.priorityText}>!!!</Text>
+              </TouchableOpacity>
+            </View>
+            {/* Time Component */}
+            <View style={styles.buttonRow} >
+              <TouchableOpacity style={styles.timeButton}>
+                <Text style={styles.buttonText}>4:00 pm</Text>
+              </TouchableOpacity>
+              <Text style={styles.toText}>to</Text>
+              <TouchableOpacity style={styles.timeButton}>
+                <Text style={styles.buttonText}>5:00 pm</Text>
+              </TouchableOpacity>
+            </View>
+            {/* Confirmation Button */}
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.button, styles.confirmButton]}
+                onPress={handleConfirm}
+              >
+                <Text style={styles.buttonText}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Tab Selection */}
       <View style={styles.tabContainer}>
@@ -53,6 +130,12 @@ const ScheduleScreen = () => {
             <Text style={styles.timeText}>{time}</Text>
           </View>
         ))}
+        {/* End Day Button */}
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/DailyReflection")}>
+            <Text style={styles.actionButtonText}>End Day</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </View>
   );
@@ -144,6 +227,102 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#333",
   },
+  buttonContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginVertical: 20,
+  },
+  actionButton: {
+    backgroundColor: "#FF7F50",
+    paddingVertical: 15,
+    borderRadius: 8,
+    flex: 1,
+    alignItems: "center",
+    marginHorizontal: 50,
+  },
+  actionButtonText: {
+    fontSize: 16,
+    color: "#FFF",
+    fontWeight: "bold",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContainer: {
+    width: "80%",
+    backgroundColor: "#FFFBEA",
+    padding: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 15,
+  },
+  input: {
+    width: "100%",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 20,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  exitButton: {
+    backgroundColor: "#FF6347",
+    height: 30, 
+    flex: 1,
+    marginLeft: 230,
+    borderRadius: 5,
+  },
+  buttonText: {
+    color: "#FFF",
+    textAlign: "center",
+    textAlignVertical: "center",
+    paddingVertical: 5,
+    fontWeight: "bold",
+    fontSize: 20,
+  },
+  confirmButton: {
+    backgroundColor: "#FF7F50",
+    flex: 1,
+    marginLeft: 5,
+  },
+  priorityButton: {
+    backgroundColor: "white",
+    height: 40, 
+    flex: 1,
+    borderRadius: 5,
+    marginHorizontal: 10,
+  }, 
+  priorityText: {
+    fontSize: 30,
+    textAlign: "center",
+    textAlignVertical: "center",
+  },
+  timeButton: {
+    backgroundColor: "gray",
+    borderRadius: 5,
+    height: 35,
+    flex: 1,
+    marginHorizontal: 15,
+    marginVertical: 20,
+  },
+  toText: {
+    color: "gray",
+    fontSize: 23,
+    fontWeight: "bold",
+    marginTop: 20,
+  }
 });
 
 export default ScheduleScreen;
