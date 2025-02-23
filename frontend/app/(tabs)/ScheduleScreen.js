@@ -6,11 +6,13 @@ const ScheduleScreen = () => {
   const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
   const [taskName, setTaskName] = useState("Task Name");
+  const [description, setDescription] = useState("Description");
+  const [timeSlots, setTimeSlots] = useState(generateTimeSlots(0));
+  const givenTime = 18;
 
   const handleConfirm = () => {
     //Test output
     console.log("Added task:", taskName);
-
     setModalVisible(false);
   };
   
@@ -97,6 +99,13 @@ const ScheduleScreen = () => {
                 <Text style={styles.buttonText}>5:00 pm</Text>
               </TouchableOpacity>
             </View>
+            {/* Description */}
+            <TextInput
+              style={styles.description}
+              placeholder="Description"
+              value={description}
+              onChangeText={setDescription}
+            />
             {/* Confirmation Button */}
             <View style={styles.buttonRow}>
               <TouchableOpacity
@@ -112,10 +121,10 @@ const ScheduleScreen = () => {
 
       {/* Tab Selection */}
       <View style={styles.tabContainer}>
-        <TouchableOpacity style={[styles.tab, styles.activeTab]}>
+        <TouchableOpacity style={[styles.tab, styles.activeTab]} onPress={() => setTimeSlots(generateTimeSlots(0))}>
           <Text style={[styles.tabText, styles.activeTabText]}>Full Day</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tab}>
+        <TouchableOpacity style={styles.tab} onPress={() => setTimeSlots(generateTimeSlots(givenTime))}>
           <Text style={styles.tabText}>Half Day</Text>
         </TouchableOpacity>
       </View>
@@ -125,7 +134,7 @@ const ScheduleScreen = () => {
 
       {/* Time Slots */}
       <ScrollView contentContainerStyle={styles.timeContainer}>
-        {generateTimeSlots().map((time, index) => (
+        {timeSlots.map((time, index) => (
           <View key={index} style={styles.timeSlot}>
             <Text style={styles.timeText}>{time}</Text>
           </View>
@@ -141,8 +150,7 @@ const ScheduleScreen = () => {
   );
 };
 
-// Function to Generate Flat Hour Time Slots (12:00 AM to 11:00 PM)
-const generateTimeSlots = () => {
+const generateTimeSlots = ( startTime ) => {
   const times = [];
   for (let hour = 0; hour < 24; hour++) {
     const formattedHour = hour === 0
@@ -152,7 +160,9 @@ const generateTimeSlots = () => {
       : hour > 12
       ? `${hour - 12}:00 PM`
       : `${hour}:00 AM`;
-    times.push(formattedHour);
+    if (hour >= startTime) {
+      times.push(formattedHour);
+    }
   }
   return times;
 };
@@ -288,7 +298,7 @@ const styles = StyleSheet.create({
     color: "#FFF",
     textAlign: "center",
     textAlignVertical: "center",
-    paddingVertical: 5,
+    paddingVertical: 3,
     fontWeight: "bold",
     fontSize: 20,
   },
@@ -296,6 +306,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FF7F50",
     flex: 1,
     marginLeft: 5,
+    borderRadius: 5,
   },
   priorityButton: {
     backgroundColor: "white",
@@ -322,7 +333,16 @@ const styles = StyleSheet.create({
     fontSize: 23,
     fontWeight: "bold",
     marginTop: 20,
-  }
+  },
+  description: {
+    width: "100%",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 20,
+    height: 100,
+  },
 });
 
 export default ScheduleScreen;
