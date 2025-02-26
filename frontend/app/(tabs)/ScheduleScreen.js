@@ -21,9 +21,23 @@ const ScheduleScreen = () => {
     today.getHours() + 1,
     0,
   ));
-  const [timePickerOpen, setTimePickerOpen] = useState(false);
-  console.log(startTime);
-   
+  const [endTime, setEndTime] = useState(new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+    startTime.getHours() + 1,
+    0,
+  ));
+  const [startPickerOpen, setStartPickerOpen] = useState(false);
+  const [endPickerOpen, setEndPickerOpen] = useState(false);
+
+  const displayStart = startTime.toLocaleTimeString('en-US', {
+    hour: '2-digit', minute: '2-digit'
+  });
+  const displayEnd = endTime.toLocaleTimeString('en-US', {
+    hour: '2-digit', minute: '2-digit'
+  });
+
   // Format the current date as "DAY MON DD, YYYY"
   const formattedDate = today.toLocaleDateString("en-US", {
     weekday: "short",
@@ -100,25 +114,36 @@ const ScheduleScreen = () => {
                 <Text style={styles.priorityText}>!!!</Text>
               </TouchableOpacity>
             </View>
-            {/* Time Modal */}
+            {/* Time Selection Modal */}
             <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.timeButton} onPress={() => setTimePickerOpen(true)}>
-                <Text style={styles.toText}>{startTime.hours}</Text>
+              <TouchableOpacity style={styles.timeButton} onPress={() => setStartPickerOpen(true)}>
+                <Text style={styles.buttonText}>{displayStart}</Text>
               <DatePicker
                 modal
-                open={timePickerOpen}
-                date={startTime} // Ensure this shows the next hour by default
+                open={startPickerOpen}
+                date={startTime}
                 mode="time"
-                onConfirm={(selectedTime) => {
-                  setTimePickerOpen(false);
-                  setStartTime(selectedTime);
+                onConfirm={(selectedStartTime) => {
+                  setStartPickerOpen(false);
+                  setStartTime(selectedStartTime);
                 }}
-                onCancel={() => {setTimePickerOpen(false)}}
+                onCancel={() => {setStartPickerOpen(false)}}
               />
               </TouchableOpacity>
               <Text style={styles.toText}>to</Text>
-              <TouchableOpacity style={styles.timeButton}>
-                <Text style={styles.buttonText}>5:00 pm</Text>
+              <TouchableOpacity style={styles.timeButton} onPress={() => setEndPickerOpen(true)}>
+                <Text style={styles.buttonText}>{displayEnd}</Text>
+              <DatePicker
+                modal
+                open={endPickerOpen}
+                date={endTime}
+                mode="time"
+                onConfirm={(selectedEndTime) => {
+                  setEndPickerOpen(false);
+                  setEndTime(selectedEndTime);
+                }}
+                onCancel={() => {setEndPickerOpen(false)}}
+              />
               </TouchableOpacity>
             </View>
             {/* Description */}
