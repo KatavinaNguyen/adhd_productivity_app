@@ -30,6 +30,7 @@ const ScheduleScreen = () => {
   ));
   const [startPickerOpen, setStartPickerOpen] = useState(false);
   const [endPickerOpen, setEndPickerOpen] = useState(false);
+  //const minTime = today.getHours();
 
   const displayStart = startTime.toLocaleTimeString('en-US', {
     hour: '2-digit', minute: '2-digit'
@@ -123,6 +124,8 @@ const ScheduleScreen = () => {
                 open={startPickerOpen}
                 date={startTime}
                 mode="time"
+                //User CANNOT pick a time that's before their current time
+                minimumDate = {new Date()}
                 onConfirm={(selectedStartTime) => {
                   setStartPickerOpen(false);
                   setStartTime(selectedStartTime);
@@ -138,6 +141,7 @@ const ScheduleScreen = () => {
                 open={endPickerOpen}
                 date={endTime}
                 mode="time"
+                minimumDate = {new Date(startTime.getTime() + 60000)}
                 onConfirm={(selectedEndTime) => {
                   setEndPickerOpen(false);
                   setEndTime(selectedEndTime);
