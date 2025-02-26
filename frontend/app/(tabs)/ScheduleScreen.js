@@ -1,24 +1,29 @@
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert, Modal, Pressable, TextInput, Touchable } from "react-native";
 import { useRouter } from "expo-router";
+import DatePicker from 'react-native-date-picker';
 
 const ScheduleScreen = () => {
   const router = useRouter();
+  const [timeSlots, setTimeSlots] = useState(generateTimeSlots(0));
   const [modalVisible, setModalVisible] = useState(false);
+
   const [taskName, setTaskName] = useState("Task Name");
   const [description, setDescription] = useState("Description");
-  const [timeSlots, setTimeSlots] = useState(generateTimeSlots(0));
-  const givenTime = 18;
+  const givenHalfTime = 18; //in 24hrs
 
-  const handleConfirm = () => {
-    //Test output
-    console.log("Added task:", taskName);
-    setModalVisible(false);
-  };
-  
-  // Get the current date
-  const today = new Date();
-  
+  // All dates are in UTC 
+  const today = new Date();  
+  const [startTime, setStartTime] = useState(new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+    today.getHours() + 1,
+    0,
+  ));
+  const [timePickerOpen, setTimePickerOpen] = useState(false);
+  console.log(startTime);
+   
   // Format the current date as "DAY MON DD, YYYY"
   const formattedDate = today.toLocaleDateString("en-US", {
     weekday: "short",
@@ -27,11 +32,17 @@ const ScheduleScreen = () => {
     year: "numeric",
   }).toUpperCase();
 
+  const createTask = () => {
+    //Test output
+    console.log("Added task:", taskName);
+    setModalVisible(false);
+  };
+
   return (
     <View style={styles.container}>
       {/* Header Section */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerIcon} onPress={() => router.push("/HomeScreen")}>
+        <TouchableOpacity style={styles.headerIcon} onPress={() => router.push("/index")}>
           <Text style={styles.iconText}>←</Text>
         </TouchableOpacity>
         <View style={styles.headerButtons}>
@@ -89,10 +100,21 @@ const ScheduleScreen = () => {
                 <Text style={styles.priorityText}>!!!</Text>
               </TouchableOpacity>
             </View>
-            {/* Time Component */}
-            <View style={styles.buttonRow} >
-              <TouchableOpacity style={styles.timeButton}>
-                <Text style={styles.buttonText}>4:00 pm</Text>
+            {/* Time Modal */}
+            <View style={styles.buttonRow}>
+              <TouchableOpacity style={styles.timeButton} onPress={() => setTimePickerOpen(true)}>
+                <Text style={styles.toText}>{startTime.hours}</Text>
+              <DatePicker
+                modal
+                open={timePickerOpen}
+                date={startTime} // Ensure this shows the next hour by default
+                mode="time"
+                onConfirm={(selectedTime) => {
+                  setTimePickerOpen(false);
+                  setStartTime(selectedTime);
+                }}
+                onCancel={() => {setTimePickerOpen(false)}}
+              />
               </TouchableOpacity>
               <Text style={styles.toText}>to</Text>
               <TouchableOpacity style={styles.timeButton}>
@@ -110,7 +132,7 @@ const ScheduleScreen = () => {
             <View style={styles.buttonRow}>
               <TouchableOpacity
                 style={[styles.button, styles.confirmButton]}
-                onPress={handleConfirm}
+                onPress={createTask}
               >
                 <Text style={styles.buttonText}>Confirm</Text>
               </TouchableOpacity>
@@ -124,7 +146,7 @@ const ScheduleScreen = () => {
         <TouchableOpacity style={[styles.tab, styles.activeTab]} onPress={() => setTimeSlots(generateTimeSlots(0))}>
           <Text style={[styles.tabText, styles.activeTabText]}>Full Day</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tab} onPress={() => setTimeSlots(generateTimeSlots(givenTime))}>
+        <TouchableOpacity style={styles.tab} onPress={() => setTimeSlots(generateTimeSlots(givenHalfTime))}>
           <Text style={styles.tabText}>Half Day</Text>
         </TouchableOpacity>
       </View>
