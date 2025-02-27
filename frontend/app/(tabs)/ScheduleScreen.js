@@ -10,6 +10,7 @@ const ScheduleScreen = () => {
 
   const [taskName, setTaskName] = useState("Task Name");
   const [description, setDescription] = useState("Description");
+  //const [priority, setPriority] = useState("low");
   const givenHalfTime = 18; //in 24hrs
 
   // All dates are in UTC 
@@ -30,7 +31,6 @@ const ScheduleScreen = () => {
   ));
   const [startPickerOpen, setStartPickerOpen] = useState(false);
   const [endPickerOpen, setEndPickerOpen] = useState(false);
-  //const minTime = today.getHours();
 
   const displayStart = startTime.toLocaleTimeString('en-US', {
     hour: '2-digit', minute: '2-digit'
@@ -47,9 +47,25 @@ const ScheduleScreen = () => {
     year: "numeric",
   }).toUpperCase();
 
-  const createTask = () => {
+  //TASK LIST
+  const tasks = [
+    { id: 1, 
+      name: taskName, 
+      description: description, 
+      start: startTime, 
+      end: endTime},
+  ];
+
+  const Card = ({children}) => (
+    <View style={styles.taskCard}>
+      {children}
+    </View>
+  );
+
+  createTask = () => {
     //Test output
     console.log("Added task:", taskName);
+
     setModalVisible(false);
   };
 
@@ -75,6 +91,7 @@ const ScheduleScreen = () => {
           </TouchableOpacity>
         </View>
       </View>
+
 
       {/* Adding Task Modal */}
       <Modal
@@ -185,11 +202,42 @@ const ScheduleScreen = () => {
 
       {/* Time Slots */}
       <ScrollView contentContainerStyle={styles.timeContainer}>
-        {timeSlots.map((time, index) => (
-          <View key={index} style={styles.timeSlot}>
-            <Text style={styles.timeText}>{time}</Text>
-          </View>
-        ))}
+        {timeSlots.map((time, index) => {
+          /*The below seq will repeat 24x*/
+
+          //time = XX:XX AM/PM
+          const [hourMinute, period] = time.split(" ");
+          const [hour, minute] = hourMinute.split(":").map(Number);
+
+          // Converting to 24hr time
+          let currentHour = hour;
+          if (period === "PM" && hour !== 12) currentHour += 12;
+          if (period === "AM" && hour === 12) currentHour = 0;
+
+          const matchTaskTime = tasks.filter((task) => {
+            return (task.start).getHours() === currentHour;
+          });
+
+          return (
+            <View key={index} style={styles.timeSlot}>
+              <Text style={styles.timeText}>{time}</Text>
+
+              {/* Display tasks within the same hour */}
+              {matchTaskTime.length > 0 ? (
+                matchTaskTime.map((task) => (
+                  //console.log("Hey there was a match for" + time),
+                  <View key={task.id} style={styles.taskContainer}>
+                    <Card>
+                      <Text style={styles.taskText}>{task.name}</Text>
+                    </Card>
+                  </View>
+                ))
+              ) : (
+                <></>
+              )}
+            </View>
+          );
+        })}
         {/* End Day Button */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/DailyReflection")}>
@@ -282,7 +330,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#FF7F50",
     height: 120,
-    justifyContent: "center",
+    marginTop: 10,
   },
   timeText: {
     fontSize: 12,
@@ -369,7 +417,6 @@ const styles = StyleSheet.create({
   priorityText: {
     fontSize: 30,
     textAlign: "center",
-    textAlignVertical: "center",
   },
   timeButton: {
     backgroundColor: "gray",
@@ -394,6 +441,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     height: 100,
   },
+  taskCard: {
+    backgroundColor: '#f0eded',
+    borderRadius: 10,
+    margin: 5,
+    padding: 16,
+  }
 });
 
 export default ScheduleScreen;
