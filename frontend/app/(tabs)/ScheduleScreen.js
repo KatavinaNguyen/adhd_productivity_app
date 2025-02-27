@@ -8,8 +8,8 @@ const ScheduleScreen = () => {
   const [timeSlots, setTimeSlots] = useState(generateTimeSlots(0));
   const [modalVisible, setModalVisible] = useState(false);
 
-  const [taskName, setTaskName] = useState("Task Name");
-  const [description, setDescription] = useState("Description");
+  const [taskName, setTaskName] = useState("");
+  const [description, setDescription] = useState("");
   //const [priority, setPriority] = useState("low");
   const givenHalfTime = 18; //in 24hrs
 
@@ -47,14 +47,7 @@ const ScheduleScreen = () => {
     year: "numeric",
   }).toUpperCase();
 
-  //TASK LIST
-  const tasks = [
-    { id: 1, 
-      name: taskName, 
-      description: description, 
-      start: startTime, 
-      end: endTime},
-  ];
+  const [tasks, setTasks] = useState([]);
 
   const Card = ({children}) => (
     <View style={styles.taskCard}>
@@ -63,12 +56,61 @@ const ScheduleScreen = () => {
   );
 
   createTask = () => {
-    //Test output
     console.log("Added task:", taskName);
 
+    const newTask = {
+      id: tasks.length + 1,
+      name: taskName, 
+      description: description, 
+      start: startTime, 
+      end: endTime
+    };
+    const exampleOneStart = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+      12,
+      0,);
+    const exampleTwoStart = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+      14,
+      0,);
+
+    const examples = [
+      { id: 1, 
+        name: "Algorithms HW", 
+        description: description, 
+        start: exampleOneStart, 
+        end: exampleOneStart + 2
+      },
+      { id: 2, 
+        name: "Laundry", 
+        description: description, 
+        start: exampleTwoStart, 
+        end: exampleTwoStart + 1
+    }];
+
+    setTasks([...tasks, newTask]);
+
+    setTaskName("");
+    setDescription("Description");
+    setStartTime(new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+      today.getHours() + 1,
+      0,));
+    setEndTime(new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+      startTime.getHours() + 1,
+      0,));
     setModalVisible(false);
   };
-
+  
   return (
     <View style={styles.container}>
       {/* Header Section */}
