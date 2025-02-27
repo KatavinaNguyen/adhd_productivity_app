@@ -1,58 +1,107 @@
-import dotenv from 'dotenv'
-dotenv.config({path: './.env'})
-import express from 'express'
-import { google } from 'googleapis'
-import dayjs from 'dayjs'
-const app = express()
-const PORT = process.env.NODE_ENV || 3000
+import dotenv from 'dotenv';
+dotenv.config({ path: './.env' });
+import express from 'express';
+import { google } from 'googleapis';
+import dayjs from 'dayjs';
 
-// app.use(express.json())
+const app = express();
+const PORT = process.env.NODE_ENV || 3000;
 
-//uses the googleapis library to create a new OAuth2 client with keys from the .env file
+// Middleware
+app.use(express.json()); // Enables JSON body parsing
+
+// OAuth2 Client Setup
 const oauth2Client = new google.auth.OAuth2(
     process.env.CLIENT_ID,
     process.env.CLIENT_SECRET,
     process.env.REDIRECT_URI
-)
+);
 
-//list of scopes that the app will have access to
-const scopes = [
-    'https://www.googleapis.com/auth/calendar'
-]
+// Token Verification Middleware (For protecting routes)
+async function verify(req, res, next) {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader) throw new Error("No authorization header");
 
-const token = "";
+        const token = authHeader.split(' ')[1]; // Extract token from Bearer scheme
+        if (!token) throw new Error("No token found");
 
-//creates a new calendar object with the google calendar API
-const calendar = google.calendar({
-    version: 'v3', 
-    auth: process.env.API_KEY
+        const ticket = await oauth2Client.verifyIdToken({
+            idToken: token,
+            audience: process.env.CLIENT_ID, // Ensure the token is for your app
+        });
+
+        const payload = ticket.getPayload();
+        if (!payload) throw new Error("Invalid ID Token");
+
+        req.userId = payload['sub']; // Save user ID for future use
+        next();
+    } catch (error) {
+        console.error("Token verification failed:", error);
+        res.status(401).send({ error: "Unauthorized" });
+    }
+}
+
+// OAuth Login Route (for frontend to initiate Google Sign-In)
+app.post("/auth/google", async (req, res) => {
+    try {
+        const { token } = req.body; // Receive the token from frontend
+        const ticket = await oauth2Client.verifyIdToken({
+            idToken: token,
+            audience: process.env.CLIENT_ID,
+        });
+
+        const payload = ticket.getPayload();
+        if (!payload) throw new Error("Invalid ID Token");
+
+        // You could generate your own token/session here if needed
+        res.send({ message: "Google Sign-In successful", userId: payload['sub'] });
+    } catch (error) {
+        console.error("Google Sign-In Error:", error);
+        res.status(401).send({ error: "Invalid Google ID Token" });
+    }
 });
 
-//tell the user to log in to google
-app.get("/google", (req, res)=>{
+// Protected Route (requires a valid Google ID token)
+app.get('/protected', verify, (req, res) => {
+    res.send({ message: `Protected resource accessed by user ${req.userId}` });
+});
+
+// Google OAuth Scopes
+const scopes = ['https://www.googleapis.com/auth/calendar'];
+
+// Google Calendar API Setup
+const calendar = google.calendar({
+    version: 'v3',
+    auth: process.env.API_KEY,
+});
+
+// OAuth Login Route
+app.get("/google", (req, res) => {
     const url = oauth2Client.generateAuthUrl({
         access_type: 'offline',
         scope: scopes
     });
-    res.redirect(url)
+    res.redirect(url);
 });
 
-//redirects the user to the google login page after the user has logged in
-app.get("/google/redirect", async (req, res)=>{
-    const code = req.query.code;
-    
-    const { tokens } = await oauth2Client.getToken(code);
-    oauth2Client.setCredentials(tokens);
-
-    res.send({
-        msg: "Successful login"
-    });
-});
-
-//schedules an event on the user's google calendar
-app.get("/google/calendar/schedule_event", async (req, res)=>{
+// Google OAuth Callback
+app.get("/google/redirect", async (req, res) => {
     try {
-        // console.log(oauth2Client.credentials.access_token)
+        const code = req.query.code;
+        const { tokens } = await oauth2Client.getToken(code);
+        oauth2Client.setCredentials(tokens);
+
+        res.send({ msg: "Successful login" });
+    } catch (error) {
+        console.error("Google Auth Redirect Error:", error);
+        res.status(500).send({ error: "Authentication failed" });
+    }
+});
+
+// Schedule Event on Google Calendar
+app.get("/google/calendar/schedule_event", async (req, res) => {
+    try {
         await calendar.events.insert({
             calendarId: 'primary',
             auth: oauth2Client,
@@ -68,53 +117,46 @@ app.get("/google/calendar/schedule_event", async (req, res)=>{
                     timeZone: 'America/New_York'
                 }
             }
-        })
+        });
 
-        res.send('Event scheduled')
+        res.send({ message: 'Event scheduled successfully' });
     } catch (error) {
-        console.log(error)
-        fiveHundredErr(error, res)
+        console.error("Error scheduling event:", error);
+        res.status(500).send({ error: "Failed to schedule event" });
     }
 });
 
-//deletes an event from the user's google calendar
-app.get("/google/calendar/delete_event", async (req, res)=>{
+// Delete Event from Google Calendar
+app.get("/google/calendar/delete_event", async (req, res) => {
     try {
-        //get the lists of events first
-        let events = await getListOfEventsFromGoogle('primary', oauth2Client, true, 'Test event', 3)
-        console.log(events.data.items)
+        const events = await getListOfEventsFromGoogle('primary', oauth2Client, true, 'Test event', 3);
+        if (!events.data.items.length) throw new Error("No events found");
 
-        //delete the first event in the list based on the id
         await calendar.events.delete({
             calendarId: 'primary',
             auth: oauth2Client,
-            eventId: `${events.data.items[0].id}`
-        })
+            eventId: events.data.items[0].id
+        });
 
-        console.log(events.data.items[0])
-        res.send('Event deleted')
+        res.send({ message: 'Event deleted successfully' });
     } catch (error) {
-        console.log(error)
-        fiveHundredErr(error, res)
+        console.error("Error deleting event:", error);
+        res.status(500).send({ error: "Failed to delete event" });
     }
 });
 
-//starts the server on the specified port
-app.listen(PORT, ()=>{
-    console.log(`server running on port ${PORT}`)
+// Start Server
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
 
-function fiveHundredErr(err, res){
-    res.status(500).send(err)
-}
-
-function getListOfEventsFromGoogle(calendarId, auth, singleEvents, q, maxResults){
+// Helper Functions
+function getListOfEventsFromGoogle(calendarId, auth, singleEvents, q, maxResults) {
     return calendar.events.list({
-        calendarId: calendarId,
-        auth: auth,
-        singleEvents: singleEvents,
-        // q can search for events with a specific description, summary, location, email
-        q: q,
-        maxResults: maxResults
-    })
+        calendarId,
+        auth,
+        singleEvents,
+        q,
+        maxResults
+    });
 }
