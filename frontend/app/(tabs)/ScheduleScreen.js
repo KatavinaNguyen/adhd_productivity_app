@@ -10,8 +10,18 @@ const ScheduleScreen = () => {
 
   const [taskName, setTaskName] = useState("");
   const [description, setDescription] = useState("");
-  //const [priority, setPriority] = useState("low");
+  const [priority, setPriority] = useState("low");
   const givenHalfTime = 18; //in 24hrs
+
+  const [selectedPriority, setSelectedPriority] = useState(null);
+  const handlePriority = (buttonId) => {
+    setSelectedPriority(buttonId);
+  }
+  const priorityButtons = [
+    { id: 1, label: '!' },
+    { id: 2, label: '!!' },
+    { id: 3, label: '!!!' },
+  ];
 
   // All dates are in UTC 
   const today = new Date();  
@@ -62,40 +72,16 @@ const ScheduleScreen = () => {
       id: tasks.length + 1,
       name: taskName, 
       description: description, 
+      priority: priority,
       start: startTime, 
       end: endTime
     };
-    const exampleOneStart = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate(),
-      12,
-      0,);
-    const exampleTwoStart = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate(),
-      14,
-      0,);
-
-    const examples = [
-      { id: 1, 
-        name: "Algorithms HW", 
-        description: description, 
-        start: exampleOneStart, 
-        end: exampleOneStart + 2
-      },
-      { id: 2, 
-        name: "Laundry", 
-        description: description, 
-        start: exampleTwoStart, 
-        end: exampleTwoStart + 1
-    }];
-
     setTasks([...tasks, newTask]);
+    console.log(newTask.priority);
 
     setTaskName("");
     setDescription("Description");
+    setPriority("low");
     setStartTime(new Date(
       today.getFullYear(),
       today.getMonth(),
@@ -162,17 +148,31 @@ const ScheduleScreen = () => {
               value={taskName}
               onChangeText={setTaskName}
             />
-            {/* Priority Settings */}
-            <View style={styles.buttonRow} >
-              <TouchableOpacity style={styles.priorityButton}>
+            {/* Priority Settings
+            <View style={styles.buttonRow}>
+              <TouchableOpacity style={styles.priorityButton} onPress={() => setPriority("low")}>
                 <Text style={styles.priorityText}>!</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.priorityButton}>
+              <TouchableOpacity style={styles.priorityButton} onPress={() => setPriority("medium")}>
                 <Text style={styles.priorityText}>!!</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.priorityButton}>
+              <TouchableOpacity style={styles.priorityButton} onPress={() => setPriority("high")}>
                 <Text style={styles.priorityText}>!!!</Text>
               </TouchableOpacity>
+            </View>*/}
+            <View style={styles.buttonRow}>
+            {priorityButtons.map((button) => (
+              <TouchableOpacity
+                key={button.id}
+                style={[
+                  styles.priorityButton,
+                  selectedPriority === button.id && styles.selectedPriority,
+                ]}
+                onPress={() => handlePriority(button.id)}
+              >
+                <Text style={styles.priorityText}>{button.label}</Text>
+              </TouchableOpacity>
+            ))}
             </View>
             {/* Time Selection Modal */}
             <View style={styles.buttonRow}>
@@ -456,6 +456,10 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginHorizontal: 10,
   }, 
+  selectedPriority: {
+    borderColor: 'green',
+    borderWidth: 2,
+  },
   priorityText: {
     fontSize: 30,
     textAlign: "center",
