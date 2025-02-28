@@ -1,17 +1,41 @@
+import { useRouter } from 'expo-router';
 import React, { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { useRouter } from 'expo-router';
 
 const PomodoroMode = () => {
   const router = useRouter();
+  // The # of minutes to use during pomodoro mode (default should be 25)
+  const pomodoroMin = 0.1; //testing it for 6sec
 
   const [isPomodoro, setIsPomodoro] = useState(true); // Switch between Pomodoro and Break
-  const [timer, setTimer] = useState(25 * 60); // 25 minutes in seconds
+  
+  const [timer, setTimer] = useState(pomodoroMin * 60); //# of seconds, decrements
+  const [timeInterval, setTimeInterval] = useState(null);
 
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds < 10 ? "0" : ""}${remainingSeconds}`;
+  };
+
+  const startTimer = () => {
+    //updates it every 1k milliseconds [1 sec]
+    setTimeInterval(
+      setInterval (() => {
+        // Decrements timer by 1
+        setTimer((prev) => prev - 1);
+      }, 1000));
+  };
+
+  const pauseTimer = () => {
+    setTimer(0);
+    clearInterval(timeInterval);
+  };
+
+  const resetTimer = () => {
+    setTimer(pomodoroMin * 60);
+    clearInterval(timeInterval);
+    console.log(timer);
   };
 
   return (
@@ -68,10 +92,10 @@ const PomodoroMode = () => {
 
         {/* Start and Reset Buttons */}
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.startButton}>
+          <TouchableOpacity style={styles.startButton} onPress={() => startTimer()}>
             <Text style={styles.startButtonText}>Start</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.resetButton}>
+          <TouchableOpacity style={styles.resetButton} onPress={() => resetTimer()}>
             <Text style={styles.resetButtonText}>Reset</Text>
           </TouchableOpacity>
         </View>
