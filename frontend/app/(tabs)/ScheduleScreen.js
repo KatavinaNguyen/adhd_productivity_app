@@ -24,7 +24,7 @@ const ScheduleScreen = () => {
   ];
 
   // All dates are in UTC 
-  const today = new Date();  
+  const today = new Date();
   const [startTime, setStartTime] = useState(new Date(
     today.getFullYear(),
     today.getMonth(),
@@ -94,18 +94,8 @@ const ScheduleScreen = () => {
     setTaskName("");
     setDescription("Description");
     setPriority("low");
-    setStartTime(new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate(),
-      today.getHours() + 1,
-      0,));
-    setEndTime(new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate(),
-      startTime.getHours() + 1,
-      0,));
+    setStartTime(new Date(today.getFullYear(), today.getMonth(), today.getDate(), today.getHours() + 1, 0,));
+    setEndTime(new Date(today.getFullYear(), today.getMonth(), today.getDate(), startTime.getHours() + 1, 0,));
     setModalVisible(false);
   };
   
@@ -160,18 +150,6 @@ const ScheduleScreen = () => {
               value={taskName}
               onChangeText={setTaskName}
             />
-            {/* Priority Settings
-            <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.priorityButton} onPress={() => setPriority("low")}>
-                <Text style={styles.priorityText}>!</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.priorityButton} onPress={() => setPriority("medium")}>
-                <Text style={styles.priorityText}>!!</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.priorityButton} onPress={() => setPriority("high")}>
-                <Text style={styles.priorityText}>!!!</Text>
-              </TouchableOpacity>
-            </View>*/}
             <View style={styles.buttonRow}>
             {priorityButtons.map((button) => (
               <TouchableOpacity
@@ -260,8 +238,6 @@ const ScheduleScreen = () => {
       {/* Time Slots */}
       <ScrollView contentContainerStyle={styles.timeContainer}>
         {timeSlots.map((time, index) => {
-          /*The below seq will repeat 24x*/
-
           //time = XX:XX AM/PM
           const [hourMinute, period] = time.split(" ");
           const [hour, minute] = hourMinute.split(":").map(Number);
@@ -282,7 +258,6 @@ const ScheduleScreen = () => {
               {/* Display tasks within the same hour */}
               {matchTaskTime.length > 0 ? (
                 matchTaskTime.map((task) => (
-                  //console.log("Hey there was a match for" + time),
                   <View key={task.id} style={styles.taskContainer}>
                     <Card>
                       <Text style={styles.taskText}>{task.name}</Text>
