@@ -12,6 +12,7 @@ GoogleSignin.configure({
 import { GoogleSignin, GoogleSigninButton, isErrorWithCode, statusCodes } from '@react-native-google-signin/google-signin';
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 
 GoogleSignin.configure({
   webClientId: '1061066222675-jvt6ob80rvjuva0qknmhnh76gf5jve6i.apps.googleusercontent.com', // client ID of type WEB for your server. Required to get the `idToken` on the user object, and for offline access.
@@ -70,6 +71,7 @@ export default function HomeScreen(){
       const response = await GoogleSignin.signIn();
       currentUser = response.data;
       console.log(currentUser);
+      router.push("/ScheduleScreen");
     } catch (error) {
       if (isErrorWithCode(error)) {
         switch (error.code) {
@@ -88,8 +90,6 @@ export default function HomeScreen(){
       }
     }  
   };
-  
-
 
   return (
     <View style={styles.container}>
