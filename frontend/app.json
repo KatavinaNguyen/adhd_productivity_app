@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "capstone",
+    "slug": "capstone",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "myapp",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.katnguyenorg.capstone"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.katnguyenorg.capstone"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      [
+        "@react-native-google-signin/google-signin",
+        {"iosUrlScheme": "com.googleusercontent.apps.1061066222675-gjbsfevvduqbbv499i15i92ir1bm3o2a"}
+      ],
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "owner": "katnguyen-org",
+    "updates": {
+      "url": "https://u.expo.dev/f7c60fbf-47d4-4b35-bd3e-29df7efa9bdc"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
+  }
+}

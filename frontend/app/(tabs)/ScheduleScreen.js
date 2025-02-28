@@ -1,0 +1,348 @@
+import React, { useState } from "react";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert, Modal, Pressable, TextInput, Touchable } from "react-native";
+import { useRouter } from "expo-router";
+
+const ScheduleScreen = () => {
+  const router = useRouter();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [taskName, setTaskName] = useState("Task Name");
+  const [description, setDescription] = useState("Description");
+  const [timeSlots, setTimeSlots] = useState(generateTimeSlots(0));
+  const givenTime = 18;
+
+  const handleConfirm = () => {
+    //Test output
+    console.log("Added task:", taskName);
+    setModalVisible(false);
+  };
+  
+  // Get the current date
+  const today = new Date();
+  
+  // Format the current date as "DAY MON DD, YYYY"
+  const formattedDate = today.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  }).toUpperCase();
+
+  return (
+    <View style={styles.container}>
+      {/* Header Section */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.headerIcon} onPress={() => router.push("/HomeScreen")}>
+          <Text style={styles.iconText}>←</Text>
+        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity onPress={() => router.push("/FocusMode")}>
+            <Text style={styles.iconText}>⏱️</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("/StampBook")}>
+            <Text style={styles.iconText}>📓</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setModalVisible(true)}>
+            <Text style={styles.iconText}>+</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("/Settings")}>
+            <Text style={styles.iconText}>⚙️</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Adding Task Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            {/* Exit */}
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.button, styles.exitButton]}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.buttonText}>X</Text>
+              </TouchableOpacity>
+            </View>
+            {/* Title */}
+            <Text style={styles.modalTitle}>Create a Task</Text>
+            {/* Text Input */}
+            <TextInput
+              style={styles.input}
+              placeholder="Task Name"
+              value={taskName}
+              onChangeText={setTaskName}
+            />
+            {/* Priority Settings */}
+            <View style={styles.buttonRow} >
+              <TouchableOpacity style={styles.priorityButton}>
+                <Text style={styles.priorityText}>!</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.priorityButton}>
+                <Text style={styles.priorityText}>!!</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.priorityButton}>
+                <Text style={styles.priorityText}>!!!</Text>
+              </TouchableOpacity>
+            </View>
+            {/* Time Component */}
+            <View style={styles.buttonRow} >
+              <TouchableOpacity style={styles.timeButton}>
+                <Text style={styles.buttonText}>4:00 pm</Text>
+              </TouchableOpacity>
+              <Text style={styles.toText}>to</Text>
+              <TouchableOpacity style={styles.timeButton}>
+                <Text style={styles.buttonText}>5:00 pm</Text>
+              </TouchableOpacity>
+            </View>
+            {/* Description */}
+            <TextInput
+              style={styles.description}
+              placeholder="Description"
+              value={description}
+              onChangeText={setDescription}
+            />
+            {/* Confirmation Button */}
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.button, styles.confirmButton]}
+                onPress={handleConfirm}
+              >
+                <Text style={styles.buttonText}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Tab Selection */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity style={[styles.tab, styles.activeTab]} onPress={() => setTimeSlots(generateTimeSlots(0))}>
+          <Text style={[styles.tabText, styles.activeTabText]}>Full Day</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.tab} onPress={() => setTimeSlots(generateTimeSlots(givenTime))}>
+          <Text style={styles.tabText}>Half Day</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Current Date */}
+      <Text style={styles.dateText}>{formattedDate}</Text>
+
+      {/* Time Slots */}
+      <ScrollView contentContainerStyle={styles.timeContainer}>
+        {timeSlots.map((time, index) => (
+          <View key={index} style={styles.timeSlot}>
+            <Text style={styles.timeText}>{time}</Text>
+          </View>
+        ))}
+        {/* End Day Button */}
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/DailyReflection")}>
+            <Text style={styles.actionButtonText}>End Day</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
+  );
+};
+
+const generateTimeSlots = ( startTime ) => {
+  const times = [];
+  for (let hour = 0; hour < 24; hour++) {
+    const formattedHour = hour === 0
+      ? "12:00 AM"
+      : hour === 12
+      ? "12:00 PM"
+      : hour > 12
+      ? `${hour - 12}:00 PM`
+      : `${hour}:00 AM`;
+    if (hour >= startTime) {
+      times.push(formattedHour);
+    }
+  }
+  return times;
+};
+
+// Styles
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#F9F9F9",
+    paddingTop: 40,
+    paddingHorizontal: 16,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  headerIcon: {
+    backgroundColor: "#ECECEC",
+    borderRadius: 8,
+    padding: 8,
+  },
+  headerButtons: {
+    flexDirection: "row",
+    gap: 16,
+  },
+  iconText: {
+    fontSize: 18,
+    color: "#333",
+  },
+  tabContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+    gap: 8,
+  },
+  tab: {
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    backgroundColor: "#ECECEC",
+  },
+  activeTab: {
+    backgroundColor: "#FFEFD5",
+  },
+  tabText: {
+    fontSize: 16,
+    color: "#666",
+  },
+  activeTabText: {
+    color: "#FF7F50",
+    fontWeight: "bold",
+  },
+  dateText: {
+    fontSize: 14,
+    color: "#FF7F50",
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  timeContainer: {
+    paddingBottom: 20,
+  },
+  timeSlot: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#FF7F50",
+    height: 120,
+    justifyContent: "center",
+  },
+  timeText: {
+    fontSize: 12,
+    color: "#333",
+  },
+  buttonContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginVertical: 20,
+  },
+  actionButton: {
+    backgroundColor: "#FF7F50",
+    paddingVertical: 15,
+    borderRadius: 8,
+    flex: 1,
+    alignItems: "center",
+    marginHorizontal: 50,
+  },
+  actionButtonText: {
+    fontSize: 16,
+    color: "#FFF",
+    fontWeight: "bold",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContainer: {
+    width: "80%",
+    backgroundColor: "#FFFBEA",
+    padding: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 15,
+  },
+  input: {
+    width: "100%",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 20,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  exitButton: {
+    backgroundColor: "#FF6347",
+    height: 30, 
+    flex: 1,
+    marginLeft: 230,
+    borderRadius: 5,
+  },
+  buttonText: {
+    color: "#FFF",
+    textAlign: "center",
+    textAlignVertical: "center",
+    paddingVertical: 3,
+    fontWeight: "bold",
+    fontSize: 20,
+  },
+  confirmButton: {
+    backgroundColor: "#FF7F50",
+    flex: 1,
+    marginLeft: 5,
+    borderRadius: 5,
+  },
+  priorityButton: {
+    backgroundColor: "white",
+    height: 40, 
+    flex: 1,
+    borderRadius: 5,
+    marginHorizontal: 10,
+  }, 
+  priorityText: {
+    fontSize: 30,
+    textAlign: "center",
+    textAlignVertical: "center",
+  },
+  timeButton: {
+    backgroundColor: "gray",
+    borderRadius: 5,
+    height: 35,
+    flex: 1,
+    marginHorizontal: 15,
+    marginVertical: 20,
+  },
+  toText: {
+    color: "gray",
+    fontSize: 23,
+    fontWeight: "bold",
+    marginTop: 20,
+  },
+  description: {
+    width: "100%",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 20,
+    height: 100,
+  },
+});
+
+export default ScheduleScreen;
