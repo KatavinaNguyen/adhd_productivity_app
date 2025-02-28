@@ -66,7 +66,18 @@ const ScheduleScreen = () => {
   );
 
   createTask = () => {
-    console.log("Added task:", taskName);
+    const checkOverlap = tasks.some((task) => {
+      return (
+        (startTime <= task.start && endTime >= task.end) ||
+        (startTime >= task.start && startTime < task.end) ||
+        (endTime > task.start && endTime <= task.end)
+      );
+    });
+
+    if (checkOverlap) {
+      alert("Overlap Error -- Please select another time slot");
+      return;
+    }
 
     const newTask = {
       id: tasks.length + 1,
@@ -76,6 +87,7 @@ const ScheduleScreen = () => {
       start: startTime, 
       end: endTime
     };
+
     setTasks([...tasks, newTask]);
     console.log(newTask.priority);
 
@@ -183,11 +195,14 @@ const ScheduleScreen = () => {
                 open={startPickerOpen}
                 date={startTime}
                 mode="time"
-                //User CANNOT pick a time that's before their current time
+                //Once user clicks on endtime they CANNOT pick a time before the current one
                 minimumDate = {new Date()}
                 onConfirm={(selectedStartTime) => {
                   setStartPickerOpen(false);
                   setStartTime(selectedStartTime);
+                  if (selectedStartTime >= endTime) {
+                    setEndTime(new Date(selectedStartTime.getTime() + 60000));
+                  }
                 }}
                 onCancel={() => {setStartPickerOpen(false)}}
               />
