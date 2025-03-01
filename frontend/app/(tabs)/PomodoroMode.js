@@ -1,41 +1,49 @@
+/*
+this is kat i still have issues with this interaction when you press start/reset
+where it'll switch the times for work/break.
+i have to compare how other pomodoro apps do it so i wanna come back to it later
+*/
+
 import { useRouter } from 'expo-router';
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const PomodoroMode = () => {
   const router = useRouter();
-  // The # of minutes to use during pomodoro mode (default should be 25)
-  const pomodoroMin = 0.1; //testing it for 6sec
+  const pomodoroMin = 2; // Work duration (25 minutes)
+  const breakMin = 1; // Break duration (5 minutes)
 
-  const [isPomodoro, setIsPomodoro] = useState(true); // Switch between Pomodoro and Break
-  
-  const [timer, setTimer] = useState(pomodoroMin * 60); //# of seconds, decrements
-  const [timeInterval, setTimeInterval] = useState(null);
+  const [isPomodoro, setIsPomodoro] = useState(true); // Work mode = true, Break mode = false
+  const [timer, setTimer] = useState(pomodoroMin * 60); // Timer in seconds
+  const [isRunning, setIsRunning] = useState(false);
 
-  const formatTime = (seconds) => {
+  useEffect(() => {
+    let interval: any;
+    if (isRunning && timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prev) => prev - 1);
+      }, 1000);
+    } else if (timer === 0) {
+      // Switch modes when timer reaches 0
+      setIsPomodoro((prevMode) => !prevMode);
+      setTimer(isPomodoro ? breakMin * 60 : pomodoroMin * 60);
+    }
+    return () => clearInterval(interval);
+  }, [isRunning, timer]);
+
+  const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds < 10 ? "0" : ""}${remainingSeconds}`;
   };
 
-  const startTimer = () => {
-    //updates it every 1k milliseconds [1 sec]
-    setTimeInterval(
-      setInterval (() => {
-        // Decrements timer by 1
-        setTimer((prev) => prev - 1);
-      }, 1000));
-  };
-
-  const pauseTimer = () => {
-    setTimer(0);
-    clearInterval(timeInterval);
+  const startPauseTimer = () => {
+    setIsRunning((prev) => !prev);
   };
 
   const resetTimer = () => {
-    setTimer(pomodoroMin * 60);
-    clearInterval(timeInterval);
-    console.log(timer);
+    setIsRunning(false);
+    setTimer(isPomodoro ? pomodoroMin * 60 : breakMin * 60);
   };
 
   return (
@@ -61,7 +69,10 @@ const PomodoroMode = () => {
               styles.modeButton,
               isPomodoro ? styles.activeMode : styles.inactiveMode,
             ]}
-            onPress={() => setIsPomodoro(true)}
+            onPress={() => {
+              setIsPomodoro(true);
+              resetTimer();
+            }}
           >
             <Text
               style={[
@@ -77,7 +88,10 @@ const PomodoroMode = () => {
               styles.modeButton,
               !isPomodoro ? styles.activeMode : styles.inactiveMode,
             ]}
-            onPress={() => setIsPomodoro(false)}
+            onPress={() => {
+              setIsPomodoro(false);
+              resetTimer();
+            }}
           >
             <Text
               style={[
@@ -90,12 +104,12 @@ const PomodoroMode = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Start and Reset Buttons */}
+        {/* Start, Pause, and Reset Buttons */}
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.startButton} onPress={() => startTimer()}>
-            <Text style={styles.startButtonText}>Start</Text>
+          <TouchableOpacity style={styles.startButton} onPress={startPauseTimer}>
+            <Text style={styles.startButtonText}>{isRunning ? "Pause" : "Start"}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.resetButton} onPress={() => resetTimer()}>
+          <TouchableOpacity style={styles.resetButton} onPress={resetTimer}>
             <Text style={styles.resetButtonText}>Reset</Text>
           </TouchableOpacity>
         </View>
@@ -103,7 +117,7 @@ const PomodoroMode = () => {
 
       {/* Exit Button */}
       <TouchableOpacity style={styles.exitButton} onPress={() => router.push("/ScheduleScreen")}>
-          <Text style={styles.exitButtonText}>Exit</Text>
+        <Text style={styles.exitButtonText}>Exit</Text>
       </TouchableOpacity>
     </View>
   );
