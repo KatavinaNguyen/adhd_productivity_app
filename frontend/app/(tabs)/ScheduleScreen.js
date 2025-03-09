@@ -93,8 +93,13 @@ const ScheduleScreen = () => {
         start: startTime, 
         end: endTime
       };
+      
+      // Prevents google calendar from creating the event twice
+      setTimeout(() => {
+      }, 5000);
 
-      await createGoogleCalendarEvent();
+      await createGoogleCalendarEvent;
+      
       setTasks([...tasks, newTask]);
 
     } catch (error) {
