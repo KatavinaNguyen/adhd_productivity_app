@@ -73,7 +73,8 @@ const scopes = ['https://www.googleapis.com/auth/calendar'];
 // Google Calendar API Setup
 const calendar = google.calendar({
     version: 'v3',
-    auth: process.env.API_KEY,
+    //auth: process.env.API_KEY,
+    auth: oauth2Client,
 });
 
 // OAuth Login Route
@@ -99,8 +100,8 @@ app.get("/google/redirect", async (req, res) => {
     }
 });
 
-// Schedule Event on Google Calendar
-app.get("/google/calendar/schedule_event", async (req, res) => {
+// OLD Schedule Event on Google Calendar
+/*app.get("/google/calendar/schedule_event", async (req, res) => {
     try {
         await calendar.events.insert({
             calendarId: 'primary',
@@ -123,6 +124,27 @@ app.get("/google/calendar/schedule_event", async (req, res) => {
     } catch (error) {
         console.error("Error scheduling event:", error);
         res.status(500).send({ error: "Failed to schedule event" });
+    }
+});*/
+
+app.post("/google/calendar/schedule_event", async (req, res) => {
+    const accessToken = req.headers.authorization?.split(" ")[1];
+    if (!accessToken) {
+        return res.status(401).json({ error: "Missing access token" });
+    }
+
+    //oauth2Client.setCredentials({ refresh_token: refreshToken });
+    oauth2Client.setCredentials({ access_token: accessToken });
+
+    try {
+        const event = await calendar.events.insert({
+            calendarId: "primary",
+            requestBody: req.body,
+        });
+        res.json({ success: true, event: event.data });
+    } catch (error) {
+        console.error("Error Creating Event:", error);
+        res.status(500).json({ error: "Failed to create event" });
     }
 });
 

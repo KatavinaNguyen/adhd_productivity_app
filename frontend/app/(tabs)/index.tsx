@@ -1,15 +1,22 @@
-import { GoogleSignin, GoogleSigninButton, isErrorWithCode, statusCodes } from '@react-native-google-signin/google-signin';
+import { GoogleSignin, GoogleSigninButton, isErrorWithCode, SignInResponse, statusCodes } from '@react-native-google-signin/google-signin';
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 GoogleSignin.configure({
   webClientId: '1061066222675-jvt6ob80rvjuva0qknmhnh76gf5jve6i.apps.googleusercontent.com',
-  scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+  scopes: ['https://www.googleapis.com/auth/drive.readonly', 
+    'https://www.googleapis.com/auth/calendar.events',
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile'
+  ],
   offlineAccess: true,
   forceCodeForRefreshToken: true,
   iosClientId: '1061066222675-gjbsfevvduqbbv499i15i92ir1bm3o2a.apps.googleusercontent.com',
 });
+
+
 
 export default function HomeScreen() {
   const [userInfo, setUserInfo] = useState<any>(null);
@@ -17,6 +24,7 @@ export default function HomeScreen() {
 
   const handleGoogleSignIn = async () => {
     console.log("Google Sign-In button pressed");
+    await GoogleSignin.signOut();
     try {
       await GoogleSignin.hasPlayServices();
       const user = await GoogleSignin.signIn();
@@ -25,15 +33,19 @@ export default function HomeScreen() {
       setUserInfo(user); // ✅ Store user info in state
 
       // ✅ Fix: Extract ID Token directly
-      const { idToken } = user;
+      //const { idToken } = user;
+      const { accessToken, idToken } = await GoogleSignin.getTokens();
       if (!idToken) {
         throw new Error("ID Token is missing from Google Sign-In response");
+      }
+      if (!accessToken) {
+        throw new Error("Access Token is missing from Google-Sign In response.");
       }
 
       console.log("ID Token:", idToken);
 
       // ✅ Send the ID Token to your backend
-      const backendUrl = "http://10.0.0.225:3000/auth/google"; // Replace with your actual backend URL
+      const backendUrl = "http://10.0.2.2:3000/auth/google"; // Replace with your actual backend URL
       const responseFromBackend = await fetch(backendUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -43,6 +55,8 @@ export default function HomeScreen() {
       const result = await responseFromBackend.json();
       console.log("Response from backend:", result);
 
+      await AsyncStorage.setItem('accessToken', accessToken);
+      
       // ✅ Navigate after successful login
       router.push("/ScheduleScreen");
 

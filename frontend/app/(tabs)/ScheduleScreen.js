@@ -2,28 +2,35 @@ import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert, Modal, Pressable, TextInput, Touchable } from "react-native";
 import { useRouter } from "expo-router";
 import DatePicker from 'react-native-date-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ScheduleScreen = () => {
+  // Navigation + Visuals
   const router = useRouter();
   const [timeSlots, setTimeSlots] = useState(generateTimeSlots(0));
   const [modalVisible, setModalVisible] = useState(false);
 
+  // Task Creation Details
+  const [tasks, setTasks] = useState([]);
   const [taskName, setTaskName] = useState("");
   const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState("low");
-  const givenHalfTime = 18; //in 24hrs
+  const [priority, setPriority] = useState(2);
 
-  const [selectedPriority, setSelectedPriority] = useState(null);
+  // Priority Setting
+  // Google Calendar color ids: 2 = green, 5 = yellow, 4 = red
+  const [selectedPriority, setSelectedPriority] = useState(2);
   const handlePriority = (buttonId) => {
     setSelectedPriority(buttonId);
+    setPriority(buttonId);
   }
   const priorityButtons = [
-    { id: 1, label: '!' },
-    { id: 2, label: '!!' },
-    { id: 3, label: '!!!' },
+    { id: 2, label: '!' },
+    { id: 5, label: '!!' },
+    { id: 4, label: '!!!' },
   ];
 
-  // All dates are in UTC 
+  // Time Setting (dates in UTC)
+  const givenHalfTime = 18; //in 24hrs
   const today = new Date();
   const [startTime, setStartTime] = useState(new Date(
     today.getFullYear(),
@@ -41,14 +48,12 @@ const ScheduleScreen = () => {
   ));
   const [startPickerOpen, setStartPickerOpen] = useState(false);
   const [endPickerOpen, setEndPickerOpen] = useState(false);
-
   const displayStart = startTime.toLocaleTimeString('en-US', {
     hour: '2-digit', minute: '2-digit'
   });
   const displayEnd = endTime.toLocaleTimeString('en-US', {
     hour: '2-digit', minute: '2-digit'
   });
-
   // Format the current date as "DAY MON DD, YYYY"
   const formattedDate = today.toLocaleDateString("en-US", {
     weekday: "short",
@@ -57,46 +62,90 @@ const ScheduleScreen = () => {
     year: "numeric",
   }).toUpperCase();
 
-  const [tasks, setTasks] = useState([]);
-
+  // Displays tasks as a card
   const Card = ({children}) => (
     <View style={styles.taskCard}>
       {children}
     </View>
   );
 
-  createTask = () => {
-    const checkOverlap = tasks.some((task) => {
-      return (
-        (startTime <= task.start && endTime >= task.end) ||
-        (startTime >= task.start && startTime < task.end) ||
-        (endTime > task.start && endTime <= task.end)
-      );
-    });
+  // Handles task creation
+  createTask = async () => {
+    try {
+      const checkOverlap = tasks.some((task) => {
+        return (
+          (startTime <= task.start && endTime >= task.end) ||
+          (startTime >= task.start && startTime < task.end) ||
+          (endTime > task.start && endTime <= task.end)
+        );
+      });
 
-    if (checkOverlap) {
-      alert("Overlap Error -- Please select another time slot");
-      return;
+      if (checkOverlap) {
+        alert("Overlap Error -- Please select another time slot");
+        return;
+      }
+  
+      const newTask = {
+        id: tasks.length + 1,
+        name: taskName, 
+        description: description, 
+        priority: priority,
+        start: startTime, 
+        end: endTime
+      };
+
+      await createGoogleCalendarEvent();
+      setTasks([...tasks, newTask]);
+
+    } catch (error) {
+      console.error("Error occurred: ", error);
     }
 
-    const newTask = {
-      id: tasks.length + 1,
-      name: taskName, 
-      description: description, 
-      priority: priority,
-      start: startTime, 
-      end: endTime
-    };
-
-    setTasks([...tasks, newTask]);
-    console.log(newTask.priority);
-
+    // Resets settings for a new task to be created
     setTaskName("");
     setDescription("Description");
-    setPriority("low");
+    setPriority(2);
+    setSelectedPriority(2);
     setStartTime(new Date(today.getFullYear(), today.getMonth(), today.getDate(), today.getHours() + 1, 0,));
     setEndTime(new Date(today.getFullYear(), today.getMonth(), today.getDate(), startTime.getHours() + 1, 0,));
     setModalVisible(false);
+  };
+
+  const createGoogleCalendarEvent = async () => {
+    const accessToken = await AsyncStorage.getItem('accessToken');
+
+    const eventDetails = {
+      summary: taskName,
+      description: description,
+      start: {
+        dateTime: startTime,
+        timeZone: 'UTC',
+      },
+      end: {
+        dateTime: endTime,
+        timeZone: 'UTC',
+      },
+      colorId: priority,
+    };       
+    try {
+      const response = await fetch("http://10.0.2.2:3000/google/calendar/schedule_event", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(eventDetails),
+      });        
+  
+      const result = await response.json();
+      if (response.ok) {
+        console.log("Event created!", result);
+      } else {
+        console.error("Error with the response:", result);
+      }
+    } catch (error) {
+      console.error("Error creating event:", error);
+    }
   };
   
   return (
@@ -121,7 +170,6 @@ const ScheduleScreen = () => {
           </TouchableOpacity>
         </View>
       </View>
-
 
       {/* Adding Task Modal */}
       <Modal
@@ -213,7 +261,10 @@ const ScheduleScreen = () => {
             <View style={styles.buttonRow}>
               <TouchableOpacity
                 style={[styles.button, styles.confirmButton]}
-                onPress={createTask}
+                onPress={() => {
+                  createTask();
+                  createGoogleCalendarEvent();
+                }}
               >
                 <Text style={styles.buttonText}>Confirm</Text>
               </TouchableOpacity>
