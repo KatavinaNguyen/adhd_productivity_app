@@ -133,7 +133,6 @@ app.post("/google/calendar/schedule_event", async (req, res) => {
         return res.status(401).json({ error: "Missing access token" });
     }
 
-    //oauth2Client.setCredentials({ refresh_token: refreshToken });
     oauth2Client.setCredentials({ access_token: accessToken });
 
     try {
@@ -141,7 +140,7 @@ app.post("/google/calendar/schedule_event", async (req, res) => {
             calendarId: "primary",
             requestBody: req.body,
         });
-        res.json({ success: true, event: event.data });
+        res.json({ success: true, event: event.data, eventId: event.data.id });
     } catch (error) {
         console.error("Error Creating Event:", error);
         res.status(500).json({ error: "Failed to create event" });

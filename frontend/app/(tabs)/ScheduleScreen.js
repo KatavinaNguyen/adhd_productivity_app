@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert, Modal, Pre
 import { useRouter } from "expo-router";
 import DatePicker from 'react-native-date-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import  Swipeable  from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 const ScheduleScreen = () => {
   // Navigation + Visuals
@@ -15,6 +16,7 @@ const ScheduleScreen = () => {
   const [taskName, setTaskName] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState(2);
+  const [complete, setComplete] = useState(false);
 
   // Priority Setting
   // Google Calendar color ids: 2 = green, 5 = yellow, 4 = red
@@ -30,7 +32,7 @@ const ScheduleScreen = () => {
   ];
 
   // Time Setting (dates in UTC)
-  const givenHalfTime = 18; //in 24hrs
+  const givenHalfTime = 17; //in 24hrs
   const today = new Date();
   const [startTime, setStartTime] = useState(new Date(
     today.getFullYear(),
@@ -63,11 +65,48 @@ const ScheduleScreen = () => {
   }).toUpperCase();
 
   // Displays tasks as a card
-  const Card = ({children}) => (
-    <View style={styles.taskCard}>
-      {children}
-    </View>
-  );
+  const Card = ({ children, taskId }) => {
+    const task = tasks.find(t => t.id === taskId);
+    const completionText = task.complete ? "Undo" : "Complete";
+    const renderLeftActions = () => (
+      <View style={styles.leftAction}>
+        <Text style={styles.completeText}>{completionText}</Text>
+      </View>
+    );  
+    const renderRightActions = () => (
+      <View style={styles.rightAction}>
+        <Text style={styles.deleteText}>Delete</Text>
+      </View>
+    );
+    //MARKS TASK AS COMPLETE
+    const completeTask = () => {
+      const updatedTasks = tasks.map(t => 
+        t.id === task.id ? { ...t, complete: !t.complete } : t
+      );
+      setTasks(updatedTasks);
+      /* Mark as complete in google calendar */
+    }
+    //PERMANENTLY DELETES TASK
+    const deleteTask = () => {
+      console.log("task deleted.. task deleted: ", taskId);
+      const newList = tasks.filter((item) => item.id !== taskId);
+      setTasks(newList);
+      /* Delete from google calendar */
+    }
+  
+    return (
+      <Swipeable
+        renderLeftActions={renderLeftActions}
+        renderRightActions={renderRightActions}
+        onSwipeableOpen={(direction) => 
+          (direction == "left") ? completeTask() : deleteTask()}
+      >
+        <View style={styles.taskCard}>
+          {children}
+        </View>
+      </Swipeable>
+    );
+  };
 
   // Handles task creation
   createTask = async () => {
@@ -86,21 +125,23 @@ const ScheduleScreen = () => {
       }
   
       const newTask = {
-        id: tasks.length + 1,
+        id: null,
         name: taskName, 
         description: description, 
         priority: priority,
         start: startTime, 
-        end: endTime
+        end: endTime, 
+        complete: complete,
       };
       
       // Prevents google calendar from creating the event twice
-      setTimeout(() => {
-      }, 5000);
+      setTimeout(() => { }, 5000);
 
-      await createGoogleCalendarEvent;
+      //stores the calendar event's id inside of our task's googleId property
+      newTask.id = await createGoogleCalendarEvent();
       
       setTasks([...tasks, newTask]);
+      console.log(newTask);
 
     } catch (error) {
       console.error("Error occurred: ", error);
@@ -113,6 +154,7 @@ const ScheduleScreen = () => {
     setSelectedPriority(2);
     setStartTime(new Date(today.getFullYear(), today.getMonth(), today.getDate(), today.getHours() + 1, 0,));
     setEndTime(new Date(today.getFullYear(), today.getMonth(), today.getDate(), startTime.getHours() + 1, 0,));
+    setComplete(false);
     setModalVisible(false);
   };
 
@@ -140,16 +182,20 @@ const ScheduleScreen = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(eventDetails),
-      });        
+      });
+      setTimeout(() => { }, 5000);
   
       const result = await response.json();
       if (response.ok) {
         console.log("Event created!", result);
+        return result.event.id;
       } else {
         console.error("Error with the response:", result);
+        return null;
       }
     } catch (error) {
       console.error("Error creating event:", error);
+      return null;
     }
   };
   
@@ -268,7 +314,6 @@ const ScheduleScreen = () => {
                 style={[styles.button, styles.confirmButton]}
                 onPress={() => {
                   createTask();
-                  createGoogleCalendarEvent();
                 }}
               >
                 <Text style={styles.buttonText}>Confirm</Text>
@@ -315,8 +360,10 @@ const ScheduleScreen = () => {
               {matchTaskTime.length > 0 ? (
                 matchTaskTime.map((task) => (
                   <View key={task.id} style={styles.taskContainer}>
-                    <Card>
-                      <Text style={styles.taskText}>{task.name}</Text>
+                    <Card taskId={task.id}>
+                      <Text style={task.complete ? [styles.taskText, { opacity: 0.2}] : styles.taskText}>
+                        {task.name}
+                      </Text>
                     </Card>
                   </View>
                 ))
@@ -537,7 +584,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0eded',
     borderRadius: 10,
     margin: 5,
+    padding: 16, 
+  },
+  leftAction: {
+    flex: 1,
     padding: 16,
+  },
+  rightAction: {
+    flex: 1,
+    padding: 16,
+  },
+  deleteText: {
+    color: 'red',
+    fontSize: 20,
+    textAlign: 'right',
+  },
+  completeText: {
+    color: 'green', 
+    fontSize: 20,
+  },  
+  taskText: {
+    color: 'black',
   }
 });
 
