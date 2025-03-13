@@ -1,15 +1,22 @@
-import { GoogleSignin, GoogleSigninButton, isErrorWithCode, statusCodes } from '@react-native-google-signin/google-signin';
+import { GoogleSignin, GoogleSigninButton, isErrorWithCode, SignInResponse, statusCodes } from '@react-native-google-signin/google-signin';
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 GoogleSignin.configure({
   webClientId: '1061066222675-jvt6ob80rvjuva0qknmhnh76gf5jve6i.apps.googleusercontent.com',
-  scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+  scopes: ['https://www.googleapis.com/auth/drive.readonly', 
+    'https://www.googleapis.com/auth/calendar.events',
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile'
+  ],
   offlineAccess: true,
   forceCodeForRefreshToken: true,
   iosClientId: '1061066222675-gjbsfevvduqbbv499i15i92ir1bm3o2a.apps.googleusercontent.com',
 });
+
+
 
 export default function HomeScreen() {
   const [userInfo, setUserInfo] = useState<any>(null);
@@ -17,6 +24,7 @@ export default function HomeScreen() {
 
   const handleGoogleSignIn = async () => {
     console.log("Google Sign-In button pressed");
+    await GoogleSignin.signOut();
     try {
       await GoogleSignin.hasPlayServices();
       const user = await GoogleSignin.signIn();
@@ -25,15 +33,20 @@ export default function HomeScreen() {
       setUserInfo(user); // ✅ Store user info in state
 
       // ✅ Fix: Extract ID Token directly
-      const { idToken } = user;
+      //const { idToken } = user;
+      const { accessToken, idToken } = await GoogleSignin.getTokens();
       if (!idToken) {
         throw new Error("ID Token is missing from Google Sign-In response");
+      }
+      if (!accessToken) {
+        throw new Error("Access Token is missing from Google-Sign In response.");
       }
 
       console.log("ID Token:", idToken);
 
       // ✅ Send the ID Token to your backend
-      const backendUrl = "http://10.0.0.225:3000/auth/google"; // Replace with your actual backend URL
+      // Local Address for Mac's: http://127.0.0.1:3000/google/calendar/schedule_event
+      const backendUrl = "http://127.0.0.1:3000/google/calendar/schedule_event"; // Replace with your actual backend URL
       const responseFromBackend = await fetch(backendUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -43,6 +56,8 @@ export default function HomeScreen() {
       const result = await responseFromBackend.json();
       console.log("Response from backend:", result);
 
+      await AsyncStorage.setItem('accessToken', accessToken);
+      
       // ✅ Navigate after successful login
       router.push("/ScheduleScreen");
 
@@ -149,55 +164,3 @@ const styles = StyleSheet.create({
   },
 });
 
-
-/*
-========= REMOVED CODE =========
-
-// Importing GoogleSignin and other modules
-import { GoogleSignin, GoogleSigninButton, isErrorWithCode, statusCodes } from '@react-native-google-signin/google-signin';
-import React from "react";
-import { StyleSheet, Text, View } from "react-native";
-import { useRouter } from "expo-router";
-
-// Google Sign-In Configuration
-GoogleSignin.configure({
-  webClientId: '1061066222675-jvt6ob80rvjuva0qknmhnh76gf5jve6i.apps.googleusercontent.com',
-  scopes: ['https://www.googleapis.com/auth/drive.readonly'],
-  offlineAccess: true,
-  forceCodeForRefreshToken: true,
-  iosClientId: '1061066222675-gjbsfevvduqbbv499i15i92ir1bm3o2a.apps.googleusercontent.com',
-});
-
-// Previous HomeScreen function with different Google Sign-In handling
-export default function HomeScreen() {
-    let currentUser = null;
-
-    const handleGoogleSignIn = async () => {
-        console.log("Google Sign-In button pressed");
-        try {
-            await GoogleSignin.hasPlayServices();
-            const response = await GoogleSignin.signIn();
-            currentUser = response.data;
-            console.log(currentUser);
-            router.push("/ScheduleScreen");
-        } catch (error) {
-            if (isErrorWithCode(error)) {
-                switch (error.code) {
-                    case statusCodes.IN_PROGRESS:
-                        // operation (eg. sign in) already in progress
-                        break;
-                    case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
-                        // Android only, play services not available or outdated
-                        break;
-                    default:
-                        // some other error happened
-                }
-            } else {
-                // an error that's not related to google sign in occurred
-                console.log(error);
-            }
-        }
-    };
-
-}
-*/

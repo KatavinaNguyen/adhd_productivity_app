@@ -73,7 +73,8 @@ const scopes = ['https://www.googleapis.com/auth/calendar'];
 // Google Calendar API Setup
 const calendar = google.calendar({
     version: 'v3',
-    auth: process.env.API_KEY,
+    //auth: process.env.API_KEY,
+    auth: oauth2Client,
 });
 
 // OAuth Login Route
@@ -99,30 +100,50 @@ app.get("/google/redirect", async (req, res) => {
     }
 });
 
-// Schedule Event on Google Calendar
-app.get("/google/calendar/schedule_event", async (req, res) => {
-    try {
-        await calendar.events.insert({
-            calendarId: 'primary',
-            auth: oauth2Client,
-            requestBody: {
-                summary: 'Test event',
-                description: 'This is a test event',
-                start: {
-                    dateTime: dayjs().add(1, 'day').format(),
-                    timeZone: 'America/New_York'
-                },
-                end: {
-                    dateTime: dayjs().add(1, 'day').add(1, 'hour').format(),
-                    timeZone: 'America/New_York'
-                }
-            }
-        });
+app.post("/google/calendar/schedule_event", async (req, res) => {
+    const accessToken = req.headers.authorization?.split(" ")[1];
+    console.log(accessToken);
 
-        res.send({ message: 'Event scheduled successfully' });
+    if (!accessToken) {
+        return res.status(401).json({ error: "Missing access token" });
+    }
+
+//oauth2Client.setCredentials({ refresh_token: refreshToken });
+    oauth2Client.setCredentials({ access_token: accessToken });
+
+    try {
+        const event = await calendar.events.insert({
+            calendarId: "primary",
+            requestBody: req.body,
+        });
+        res.json({ success: true, event: event.data, eventId: event.data.id });
     } catch (error) {
-        console.error("Error scheduling event:", error);
-        res.status(500).send({ error: "Failed to schedule event" });
+        console.error("Error Creating Event:", error);
+        res.status(500).json({ error: "Failed to create event" });
+    }
+});
+
+// Edit Event in Google Calendar
+app.put("/google/calendar/update_event", async (req, res) => {
+    const accessToken = req.headers.authorization?.split(" ")[1];
+    console.log(`access token: ${accessToken}`);
+
+    if (!accessToken) {
+        return res.status(401).json({ error: "Missing access token" });
+    }
+
+    oauth2Client.setCredentials({ access_token: accessToken });
+
+    try {
+        const event = await calendar.events.update({
+            calendarId: "primary",
+            eventId: req.body.eventId,
+            requestBody: req.body.eventDetails,
+        });
+        res.json({ success: true, event: event.data });
+    } catch (error) {
+        console.error("Error Updating Event:", error);
+        res.status(500).json({ error: "Failed to update event" });
     }
 });
 
@@ -141,7 +162,11 @@ app.get("/google/calendar/delete_event", async (req, res) => {
         res.send({ message: 'Event deleted successfully' });
     } catch (error) {
         console.error("Error deleting event:", error);
-        res.status(500).send({ error: "Failed to delete event" });
+        if (error.code === 'ECONNABORTED') {
+            res.status(500).json({ error: "Request timed out" });
+        } else {
+            res.status(500).json({ error: "Failed to delete event" });
+        }
     }
 });
 

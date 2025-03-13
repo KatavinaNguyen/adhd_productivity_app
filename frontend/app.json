@@ -27,7 +27,9 @@
     "plugins": [
       [
         "@react-native-google-signin/google-signin",
-        {"iosUrlScheme": "com.googleusercontent.apps.1061066222675-gjbsfevvduqbbv499i15i92ir1bm3o2a"}
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.1061066222675-gjbsfevvduqbbv499i15i92ir1bm3o2a"
+        }
       ],
       "expo-router",
       [
@@ -38,7 +40,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true

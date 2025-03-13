@@ -2,28 +2,39 @@ import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert, Modal, Pressable, TextInput, Touchable } from "react-native";
 import { useRouter } from "expo-router";
 import DatePicker from 'react-native-date-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import  Swipeable  from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 const ScheduleScreen = () => {
+  // Navigation + Visuals
   const router = useRouter();
   const [timeSlots, setTimeSlots] = useState(generateTimeSlots(0));
   const [modalVisible, setModalVisible] = useState(false);
+  const [detailsModalVisible, setDetailsModalVisible] = useState(false);
 
+  // Task Creation Details
+  const [tasks, setTasks] = useState([]);
   const [taskName, setTaskName] = useState("");
   const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState("low");
-  const givenHalfTime = 18; //in 24hrs
+  const [priority, setPriority] = useState(2);
+  const [complete, setComplete] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
 
-  const [selectedPriority, setSelectedPriority] = useState(null);
+  // Priority Setting
+  // Google Calendar color ids: 2 = green, 5 = yellow, 4 = red
+  const [selectedPriority, setSelectedPriority] = useState(2);
   const handlePriority = (buttonId) => {
     setSelectedPriority(buttonId);
+    setPriority(buttonId);
   }
   const priorityButtons = [
-    { id: 1, label: '!' },
-    { id: 2, label: '!!' },
-    { id: 3, label: '!!!' },
+    { id: 2, label: '!' },
+    { id: 5, label: '!!' },
+    { id: 4, label: '!!!' },
   ];
 
-  // All dates are in UTC 
+  // Time Setting (dates in UTC)
+  const givenHalfTime = 17; //in 24hrs
   const today = new Date();
   const [startTime, setStartTime] = useState(new Date(
     today.getFullYear(),
@@ -41,14 +52,12 @@ const ScheduleScreen = () => {
   ));
   const [startPickerOpen, setStartPickerOpen] = useState(false);
   const [endPickerOpen, setEndPickerOpen] = useState(false);
-
   const displayStart = startTime.toLocaleTimeString('en-US', {
     hour: '2-digit', minute: '2-digit'
   });
   const displayEnd = endTime.toLocaleTimeString('en-US', {
     hour: '2-digit', minute: '2-digit'
   });
-
   // Format the current date as "DAY MON DD, YYYY"
   const formattedDate = today.toLocaleDateString("en-US", {
     weekday: "short",
@@ -57,46 +66,231 @@ const ScheduleScreen = () => {
     year: "numeric",
   }).toUpperCase();
 
-  const [tasks, setTasks] = useState([]);
-
-  const Card = ({children}) => (
-    <View style={styles.taskCard}>
-      {children}
-    </View>
-  );
-
-  createTask = () => {
-    const checkOverlap = tasks.some((task) => {
-      return (
-        (startTime <= task.start && endTime >= task.end) ||
-        (startTime >= task.start && startTime < task.end) ||
-        (endTime > task.start && endTime <= task.end)
+  // Displays tasks as a card
+  const Card = ({ children, taskId }) => {
+    const task = tasks.find(t => t.id === taskId);
+    const completionText = task.complete ? "Undo" : "Complete";
+    const renderLeftActions = () => (
+      <View style={styles.leftAction}>
+        <Text style={styles.completeText}>{completionText}</Text>
+      </View>
+    );  
+    const renderRightActions = () => (
+      <View style={styles.rightAction}>
+        <Text style={styles.deleteText}>Delete</Text>
+      </View>
+    );
+    //MARKS TASK AS COMPLETE
+    const completeTask = () => {
+      const updatedTasks = tasks.map(t => 
+        t.id === task.id ? { ...t, complete: !t.complete } : t
       );
-    });
+      setTasks(updatedTasks);
+      /* Mark as complete in google calendar */
+    }
+    //PERMANENTLY DELETES TASK
+    const deleteTask = () => {
+      console.log("task deleted.. task deleted: ", taskId);
+      const newList = tasks.filter((item) => item.id !== taskId);
+      setTasks(newList);
+      /* Delete from google calendar */
+    }
+  
+    return (
+      <Swipeable
+        renderLeftActions={renderLeftActions}
+        renderRightActions={renderRightActions}
+        onSwipeableOpen={(direction) => 
+          (direction == "left") ? completeTask() : deleteTask()}
+      >
+        <View style={styles.taskCard}>
+          {children}
+        </View>
+      </Swipeable>
+    );
+  };
 
-    if (checkOverlap) {
-      alert("Overlap Error -- Please select another time slot");
-      return;
+  // Handles task creation
+  const createTask = async () => {
+    try {
+      const checkOverlap = tasks.some((task) => {
+        return (
+          (startTime <= task.start && endTime >= task.end) ||
+          (startTime >= task.start && startTime < task.end) ||
+          (endTime > task.start && endTime <= task.end)
+        );
+      });
+
+      if (checkOverlap) {
+        alert("Overlap Error -- Please select another time slot");
+        return;
+      }
+  
+      const newTask = {
+        id: null,
+        name: taskName, 
+        description: description, 
+        priority: priority,
+        start: startTime, 
+        end: endTime, 
+        complete: complete,
+      };
+      
+      // Prevents google calendar from creating the event twice
+      setTimeout(() => { }, 5000);
+
+      //stores the calendar event's id inside of our task's googleId property
+      newTask.id = await createGoogleCalendarEvent(newTask);
+      
+      setTasks([...tasks, newTask]);
+      console.log(newTask);
+
+    } catch (error) {
+      console.error("Error occurred: ", error);
     }
 
-    const newTask = {
-      id: tasks.length + 1,
-      name: taskName, 
-      description: description, 
-      priority: priority,
-      start: startTime, 
-      end: endTime
-    };
-
-    setTasks([...tasks, newTask]);
-    console.log(newTask.priority);
-
+    // Resets settings for a new task to be created
     setTaskName("");
     setDescription("Description");
-    setPriority("low");
+    setPriority(2);
+    setSelectedPriority(2);
+    setStartTime(new Date(today.getFullYear(), today.getMonth(), today.getDate(), today.getHours() + 1, 0,));
+    setEndTime(new Date(today.getFullYear(), today.getMonth(), today.getDate(), startTime.getHours() + 1, 0,));
+    setComplete(false);
+    setModalVisible(false);
+    resetTaskForm();
+  };
+
+  const createGoogleCalendarEvent = async (task) => {
+    const accessToken = await AsyncStorage.getItem('accessToken');
+
+    const eventDetails = {
+      summary: task.name,
+      description: task.description,
+      start: {
+        dateTime: task.start,
+        timeZone: 'UTC',
+      },
+      end: {
+        dateTime: task.end,
+        timeZone: 'UTC',
+      },
+      colorId: task.priority,
+    };       
+    try {
+      console.log("Sending request to create event with details:", eventDetails);
+      // Local Address for Mac's: http://127.0.0.1:3000/google/calendar/schedule_event
+      const response = await fetch("http://127.0.0.1:3000/google/calendar/schedule_event", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(eventDetails),
+      });
+      setTimeout(() => { }, 5000);
+  
+      const result = await response.json();
+      if (response.ok) {
+        console.log("Event created!", result);
+        return result.event.id;
+      } else {
+        console.error("Error with the response:", result);
+        return null;
+      }
+    } catch (error) {
+      console.error("Error creating event:", error);
+      return null;
+    }
+  };
+
+  // Handles task editing
+  const editTask = (task) => {
+    setSelectedTask(task);
+    setTaskName(task.name);
+    setDescription(task.description);
+    setPriority(task.priority);
+    setSelectedPriority(task.priority);
+    setStartTime(new Date(task.start));
+    setEndTime(new Date(task.end));
+    setModalVisible(true);
+  };
+
+  const updateTask = async () => {
+    try {
+      const updatedTask = {
+        ...selectedTask,
+        name: taskName,
+        description: description,
+        priority: priority,
+        start: startTime,
+        end: endTime,
+      };
+
+      await updateGoogleCalendarEvent(updatedTask);
+
+      setTasks(tasks.map(task => task.id === updatedTask.id ? updatedTask : task));
+      setSelectedTask(null);
+      setModalVisible(false);
+    } catch (error) {
+      console.error("Error occurred: ", error);
+    }
+
+    resetTaskForm();
+  };
+
+  const updateGoogleCalendarEvent = async (task) => {
+    const accessToken = await AsyncStorage.getItem('accessToken');
+
+    const eventDetails = {
+        summary: task.name,
+        description: task.description,
+        start: {
+            dateTime: task.start,
+            timeZone: 'UTC',
+        },
+        end: {
+            dateTime: task.end,
+            timeZone: 'UTC',
+        },
+        colorId: task.priority,
+    };
+
+    try {
+        console.log("Sending request to update event with details:", eventDetails);
+        const response = await fetch("http://127.0.0.1:3000/google/calendar/update_event", {
+            method: "PUT",
+            headers: {
+                "Authorization": `Bearer ${accessToken}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ eventId: task.id , eventDetails }),
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+            console.log("Event updated!", result);
+        } else {
+            console.error("Error with the response:", result);
+        }
+    } catch (error) {
+        console.error("Error updating event:", error);
+    }
+  };
+
+  const resetTaskForm = () => {
+    setTaskName("");
+    setDescription("Description");
+    setPriority(2);
+    setSelectedPriority(2);
     setStartTime(new Date(today.getFullYear(), today.getMonth(), today.getDate(), today.getHours() + 1, 0,));
     setEndTime(new Date(today.getFullYear(), today.getMonth(), today.getDate(), startTime.getHours() + 1, 0,));
     setModalVisible(false);
+  };
+
+  const viewTaskDetails = (task) => {
+    setSelectedTask(task);
+    setDetailsModalVisible(true);
   };
   
   return (
@@ -122,7 +316,6 @@ const ScheduleScreen = () => {
         </View>
       </View>
 
-
       {/* Adding Task Modal */}
       <Modal
         animationType="slide"
@@ -142,7 +335,7 @@ const ScheduleScreen = () => {
               </TouchableOpacity>
             </View>
             {/* Title */}
-            <Text style={styles.modalTitle}>Create a Task</Text>
+            <Text style={styles.modalTitle}>{selectedTask ? "Edit Task" : "Create a Task"}</Text>
             {/* Text Input */}
             <TextInput
               style={styles.input}
@@ -213,11 +406,57 @@ const ScheduleScreen = () => {
             <View style={styles.buttonRow}>
               <TouchableOpacity
                 style={[styles.button, styles.confirmButton]}
-                onPress={createTask}
+                onPress={() => {
+                  selectedTask ? updateTask() : createTask();
+                }}
               >
                 <Text style={styles.buttonText}>Confirm</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Task Details Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={detailsModalVisible}
+        onRequestClose={() => setDetailsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            {/* Exit */}
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.button, styles.exitButton]}
+                onPress={() => setDetailsModalVisible(false)}
+              >
+                <Text style={styles.buttonText}>X</Text>
+              </TouchableOpacity>
+            </View>
+            {/* Task Details */}
+            {selectedTask && (
+              <>
+                <Text style={styles.modalTitle}>{selectedTask.name}</Text>
+                <Text style={styles.detailText}>Priority: {selectedTask.priority}</Text>
+                <Text style={styles.detailText}>Start Time: {new Date(selectedTask.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</Text>
+                <Text style={styles.detailText}>End Time: {new Date(selectedTask.end).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</Text>
+                <Text style={styles.detailText}>Description: {selectedTask.description}</Text>
+                {/* Edit Button */}
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={[styles.button, styles.confirmButton]}
+                    onPress={() => {
+                      setDetailsModalVisible(false);
+                      editTask(selectedTask);
+                    }}
+                  >
+                    <Text style={styles.buttonText}>Edit</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
           </View>
         </View>
       </Modal>
@@ -258,11 +497,13 @@ const ScheduleScreen = () => {
               {/* Display tasks within the same hour */}
               {matchTaskTime.length > 0 ? (
                 matchTaskTime.map((task) => (
-                  <View key={task.id} style={styles.taskContainer}>
-                    <Card>
-                      <Text style={styles.taskText}>{task.name}</Text>
+                  <TouchableOpacity key={task.id} style={styles.taskContainer} onPress={() => viewTaskDetails(task)} activeOpacity={0.7}>
+                    <Card taskId={task.id}>
+                      <Text style={task.complete ? [styles.taskText, { opacity: 0.2}] : styles.taskText}>
+                        {task.name}
+                      </Text>
                     </Card>
-                  </View>
+                  </TouchableOpacity>
                 ))
               ) : (
                 <></>
@@ -481,7 +722,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0eded',
     borderRadius: 10,
     margin: 5,
+    padding: 16, 
+  },
+  leftAction: {
+    flex: 1,
     padding: 16,
+  },
+  rightAction: {
+    flex: 1,
+    padding: 16,
+  },
+  deleteText: {
+    color: 'red',
+    fontSize: 20,
+    textAlign: 'right',
+  },
+  completeText: {
+    color: 'green', 
+    fontSize: 20,
+  },  
+  taskText: {
+    color: 'black',
+  },
+  detailButton: {
+    fontSize: 16,
+    marginBottom: 10,
   }
 });
 
