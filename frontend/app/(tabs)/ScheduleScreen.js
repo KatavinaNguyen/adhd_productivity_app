@@ -10,6 +10,7 @@ const ScheduleScreen = () => {
   const router = useRouter();
   const [timeSlots, setTimeSlots] = useState(generateTimeSlots(0));
   const [modalVisible, setModalVisible] = useState(false);
+  const [detailsModalVisible, setDetailsModalVisible] = useState(false);
 
   // Task Creation Details
   const [tasks, setTasks] = useState([]);
@@ -17,6 +18,7 @@ const ScheduleScreen = () => {
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState(2);
   const [complete, setComplete] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
 
   // Priority Setting
   // Google Calendar color ids: 2 = green, 5 = yellow, 4 = red
@@ -109,7 +111,7 @@ const ScheduleScreen = () => {
   };
 
   // Handles task creation
-  createTask = async () => {
+  const createTask = async () => {
     try {
       const checkOverlap = tasks.some((task) => {
         return (
@@ -138,7 +140,7 @@ const ScheduleScreen = () => {
       setTimeout(() => { }, 5000);
 
       //stores the calendar event's id inside of our task's googleId property
-      newTask.id = await createGoogleCalendarEvent();
+      newTask.id = await createGoogleCalendarEvent(newTask);
       
       setTasks([...tasks, newTask]);
       console.log(newTask);
@@ -156,26 +158,29 @@ const ScheduleScreen = () => {
     setEndTime(new Date(today.getFullYear(), today.getMonth(), today.getDate(), startTime.getHours() + 1, 0,));
     setComplete(false);
     setModalVisible(false);
+    resetTaskForm();
   };
 
-  const createGoogleCalendarEvent = async () => {
+  const createGoogleCalendarEvent = async (task) => {
     const accessToken = await AsyncStorage.getItem('accessToken');
 
     const eventDetails = {
-      summary: taskName,
-      description: description,
+      summary: task.name,
+      description: task.description,
       start: {
-        dateTime: startTime,
+        dateTime: task.start,
         timeZone: 'UTC',
       },
       end: {
-        dateTime: endTime,
+        dateTime: task.end,
         timeZone: 'UTC',
       },
-      colorId: priority,
+      colorId: task.priority,
     };       
     try {
-      const response = await fetch("http://10.0.2.2:3000/google/calendar/schedule_event", {
+      console.log("Sending request to create event with details:", eventDetails);
+      // Local Address for Mac's: http://127.0.0.1:3000/google/calendar/schedule_event
+      const response = await fetch("http://127.0.0.1:3000/google/calendar/schedule_event", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${accessToken}`,
@@ -197,6 +202,95 @@ const ScheduleScreen = () => {
       console.error("Error creating event:", error);
       return null;
     }
+  };
+
+  // Handles task editing
+  const editTask = (task) => {
+    setSelectedTask(task);
+    setTaskName(task.name);
+    setDescription(task.description);
+    setPriority(task.priority);
+    setSelectedPriority(task.priority);
+    setStartTime(new Date(task.start));
+    setEndTime(new Date(task.end));
+    setModalVisible(true);
+  };
+
+  const updateTask = async () => {
+    try {
+      const updatedTask = {
+        ...selectedTask,
+        name: taskName,
+        description: description,
+        priority: priority,
+        start: startTime,
+        end: endTime,
+      };
+
+      await updateGoogleCalendarEvent(updatedTask);
+
+      setTasks(tasks.map(task => task.id === updatedTask.id ? updatedTask : task));
+      setSelectedTask(null);
+      setModalVisible(false);
+    } catch (error) {
+      console.error("Error occurred: ", error);
+    }
+
+    resetTaskForm();
+  };
+
+  const updateGoogleCalendarEvent = async (task) => {
+    const accessToken = await AsyncStorage.getItem('accessToken');
+
+    const eventDetails = {
+        summary: task.name,
+        description: task.description,
+        start: {
+            dateTime: task.start,
+            timeZone: 'UTC',
+        },
+        end: {
+            dateTime: task.end,
+            timeZone: 'UTC',
+        },
+        colorId: task.priority,
+    };
+
+    try {
+        console.log("Sending request to update event with details:", eventDetails);
+        const response = await fetch("http://127.0.0.1:3000/google/calendar/update_event", {
+            method: "PUT",
+            headers: {
+                "Authorization": `Bearer ${accessToken}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ eventId: task.id , eventDetails }),
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+            console.log("Event updated!", result);
+        } else {
+            console.error("Error with the response:", result);
+        }
+    } catch (error) {
+        console.error("Error updating event:", error);
+    }
+  };
+
+  const resetTaskForm = () => {
+    setTaskName("");
+    setDescription("Description");
+    setPriority(2);
+    setSelectedPriority(2);
+    setStartTime(new Date(today.getFullYear(), today.getMonth(), today.getDate(), today.getHours() + 1, 0,));
+    setEndTime(new Date(today.getFullYear(), today.getMonth(), today.getDate(), startTime.getHours() + 1, 0,));
+    setModalVisible(false);
+  };
+
+  const viewTaskDetails = (task) => {
+    setSelectedTask(task);
+    setDetailsModalVisible(true);
   };
   
   return (
@@ -241,7 +335,7 @@ const ScheduleScreen = () => {
               </TouchableOpacity>
             </View>
             {/* Title */}
-            <Text style={styles.modalTitle}>Create a Task</Text>
+            <Text style={styles.modalTitle}>{selectedTask ? "Edit Task" : "Create a Task"}</Text>
             {/* Text Input */}
             <TextInput
               style={styles.input}
@@ -313,12 +407,56 @@ const ScheduleScreen = () => {
               <TouchableOpacity
                 style={[styles.button, styles.confirmButton]}
                 onPress={() => {
-                  createTask();
+                  selectedTask ? updateTask() : createTask();
                 }}
               >
                 <Text style={styles.buttonText}>Confirm</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Task Details Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={detailsModalVisible}
+        onRequestClose={() => setDetailsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            {/* Exit */}
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.button, styles.exitButton]}
+                onPress={() => setDetailsModalVisible(false)}
+              >
+                <Text style={styles.buttonText}>X</Text>
+              </TouchableOpacity>
+            </View>
+            {/* Task Details */}
+            {selectedTask && (
+              <>
+                <Text style={styles.modalTitle}>{selectedTask.name}</Text>
+                <Text style={styles.detailText}>Priority: {selectedTask.priority}</Text>
+                <Text style={styles.detailText}>Start Time: {new Date(selectedTask.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</Text>
+                <Text style={styles.detailText}>End Time: {new Date(selectedTask.end).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</Text>
+                <Text style={styles.detailText}>Description: {selectedTask.description}</Text>
+                {/* Edit Button */}
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={[styles.button, styles.confirmButton]}
+                    onPress={() => {
+                      setDetailsModalVisible(false);
+                      editTask(selectedTask);
+                    }}
+                  >
+                    <Text style={styles.buttonText}>Edit</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
           </View>
         </View>
       </Modal>
@@ -359,13 +497,13 @@ const ScheduleScreen = () => {
               {/* Display tasks within the same hour */}
               {matchTaskTime.length > 0 ? (
                 matchTaskTime.map((task) => (
-                  <View key={task.id} style={styles.taskContainer}>
+                  <TouchableOpacity key={task.id} style={styles.taskContainer} onPress={() => viewTaskDetails(task)} activeOpacity={0.7}>
                     <Card taskId={task.id}>
                       <Text style={task.complete ? [styles.taskText, { opacity: 0.2}] : styles.taskText}>
                         {task.name}
                       </Text>
                     </Card>
-                  </View>
+                  </TouchableOpacity>
                 ))
               ) : (
                 <></>
@@ -605,6 +743,10 @@ const styles = StyleSheet.create({
   },  
   taskText: {
     color: 'black',
+  },
+  detailButton: {
+    fontSize: 16,
+    marginBottom: 10,
   }
 });
 

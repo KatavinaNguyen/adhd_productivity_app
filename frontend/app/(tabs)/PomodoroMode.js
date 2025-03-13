@@ -10,15 +10,15 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const PomodoroMode = () => {
   const router = useRouter();
-  const pomodoroMin = 2; // Work duration (25 minutes)
-  const breakMin = 1; // Break duration (5 minutes)
+  const pomodoroMin = 25; // Work duration (25 minutes)
+  const breakMin = 5; // Break duration (5 minutes)
 
   const [isPomodoro, setIsPomodoro] = useState(true); // Work mode = true, Break mode = false
   const [timer, setTimer] = useState(pomodoroMin * 60); // Timer in seconds
   const [isRunning, setIsRunning] = useState(false);
 
   useEffect(() => {
-    let interval: any;
+    let interval;
     if (isRunning && timer > 0) {
       interval = setInterval(() => {
         setTimer((prev) => prev - 1);
@@ -31,7 +31,7 @@ const PomodoroMode = () => {
     return () => clearInterval(interval);
   }, [isRunning, timer]);
 
-  const formatTime = (seconds: number) => {
+  const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds < 10 ? "0" : ""}${remainingSeconds}`;
