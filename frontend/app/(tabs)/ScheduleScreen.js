@@ -86,7 +86,6 @@ const ScheduleScreen = () => {
         t.id === task.id ? { ...t, complete: !t.complete } : t
       );
       setTasks(updatedTasks);
-      /* Mark as complete in google calendar */
     }
     //PERMANENTLY DELETES TASK
     const deleteTask = () => {
@@ -151,7 +150,7 @@ const ScheduleScreen = () => {
 
     // Resets settings for a new task to be created
     setTaskName("");
-    setDescription("Description");
+    setDescription("");
     setPriority(2);
     setSelectedPriority(2);
     setStartTime(new Date(today.getFullYear(), today.getMonth(), today.getDate(), today.getHours() + 1, 0,));
@@ -180,7 +179,7 @@ const ScheduleScreen = () => {
     try {
       console.log("Sending request to create event with details:", eventDetails);
       // Local Address for Mac's: http://127.0.0.1:3000/google/calendar/schedule_event
-      const response = await fetch("http://127.0.0.1:3000/google/calendar/schedule_event", {
+      const response = await fetch("http://10.0.2.2:3000/google/calendar/schedule_event", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${accessToken}`,
@@ -258,7 +257,7 @@ const ScheduleScreen = () => {
 
     try {
         console.log("Sending request to update event with details:", eventDetails);
-        const response = await fetch("http://127.0.0.1:3000/google/calendar/update_event", {
+        const response = await fetch("http://10.0.2.2:3000/google/calendar/update_event", {
             method: "PUT",
             headers: {
                 "Authorization": `Bearer ${accessToken}`,
@@ -438,11 +437,16 @@ const ScheduleScreen = () => {
             {/* Task Details */}
             {selectedTask && (
               <>
-                <Text style={styles.modalTitle}>{selectedTask.name}</Text>
-                <Text style={styles.detailText}>Priority: {selectedTask.priority}</Text>
+                <Text style={styles.modalTitle}>{selectedTask.name}</Text> 
+                <Text style={styles.detailText}>Priority: {
+                  selectedTask.priority == 4 ? <Text>High</Text> : 
+                  (selectedTask.priority == 5 ? <Text>Medium</Text> : 
+                  <Text>Low</Text>)
+                }</Text>
                 <Text style={styles.detailText}>Start Time: {new Date(selectedTask.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</Text>
                 <Text style={styles.detailText}>End Time: {new Date(selectedTask.end).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</Text>
                 <Text style={styles.detailText}>Description: {selectedTask.description}</Text>
+                <Text></Text>
                 {/* Edit Button */}
                 <View style={styles.buttonRow}>
                   <TouchableOpacity
@@ -722,7 +726,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0eded',
     borderRadius: 10,
     margin: 5,
-    padding: 16, 
+    padding: 16,
   },
   leftAction: {
     flex: 1,
