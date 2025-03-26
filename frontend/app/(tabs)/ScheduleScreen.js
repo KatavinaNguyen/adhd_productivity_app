@@ -86,13 +86,14 @@ const ScheduleScreen = () => {
         t.id === task.id ? { ...t, complete: !t.complete } : t
       );
       setTasks(updatedTasks);
+      setSelectedTask(null);
     }
     //PERMANENTLY DELETES TASK
     const deleteTask = () => {
       console.log("task deleted.. task deleted: ", taskId);
       const newList = tasks.filter((item) => item.id !== taskId);
       setTasks(newList);
-      /* Delete from google calendar */
+      setSelectedTask(null);
     }
   
     return (
@@ -149,14 +150,6 @@ const ScheduleScreen = () => {
     }
 
     // Resets settings for a new task to be created
-    setTaskName("");
-    setDescription("");
-    setPriority(2);
-    setSelectedPriority(2);
-    setStartTime(new Date(today.getFullYear(), today.getMonth(), today.getDate(), today.getHours() + 1, 0,));
-    setEndTime(new Date(today.getFullYear(), today.getMonth(), today.getDate(), startTime.getHours() + 1, 0,));
-    setComplete(false);
-    setModalVisible(false);
     resetTaskForm();
   };
 
@@ -229,8 +222,7 @@ const ScheduleScreen = () => {
       await updateGoogleCalendarEvent(updatedTask);
 
       setTasks(tasks.map(task => task.id === updatedTask.id ? updatedTask : task));
-      setSelectedTask(null);
-      setModalVisible(false);
+      resetTaskForm();
     } catch (error) {
       console.error("Error occurred: ", error);
     }
@@ -279,11 +271,12 @@ const ScheduleScreen = () => {
 
   const resetTaskForm = () => {
     setTaskName("");
-    setDescription("Description");
+    setDescription("");
     setPriority(2);
     setSelectedPriority(2);
     setStartTime(new Date(today.getFullYear(), today.getMonth(), today.getDate(), today.getHours() + 1, 0,));
     setEndTime(new Date(today.getFullYear(), today.getMonth(), today.getDate(), startTime.getHours() + 1, 0,));
+    setSelectedTask(null);
     setModalVisible(false);
   };
 
@@ -306,7 +299,7 @@ const ScheduleScreen = () => {
           <TouchableOpacity onPress={() => router.push("/StampBook")}>
             <Text style={styles.iconText}>📓</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setModalVisible(true)}>
+          <TouchableOpacity onPress={() => [setModalVisible(true), setSelectedTask(null)]}>
             <Text style={styles.iconText}>+</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push("/Settings")}>
@@ -320,7 +313,7 @@ const ScheduleScreen = () => {
         animationType="slide"
         transparent={true}
         visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
+        onRequestClose={() => resetTaskForm()}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
@@ -328,7 +321,7 @@ const ScheduleScreen = () => {
             <View style={styles.buttonRow}>
               <TouchableOpacity
                 style={[styles.button, styles.exitButton]}
-                onPress={() => setModalVisible(false)}
+                onPress={() => resetTaskForm() }
               >
                 <Text style={styles.buttonText}>X</Text>
               </TouchableOpacity>
@@ -494,6 +487,19 @@ const ScheduleScreen = () => {
             return (task.start).getHours() === currentHour;
           });
 
+          {matchTaskTime.map((task) => {
+            const taskStart = new Date(task.start);
+            const minutesPastHour = taskStart.getMinutes(); // 0-59 minutes into the hour
+            const slotHeight = 500;
+            const taskTopOffset = (minutesPastHour / 60) * slotHeight;
+          
+            return (
+              <View key={task.id} style={[styles.taskCard, { top: taskTopOffset }]}>
+                <Text style={styles.taskText}>{task.name}</Text>
+              </View>
+            );
+          })}
+          
           return (
             <View key={index} style={styles.timeSlot}>
               <Text style={styles.timeText}>{time}</Text>
@@ -503,7 +509,7 @@ const ScheduleScreen = () => {
                 matchTaskTime.map((task) => (
                   <TouchableOpacity key={task.id} style={styles.taskContainer} onPress={() => viewTaskDetails(task)} activeOpacity={0.7}>
                     <Card taskId={task.id}>
-                      <Text style={task.complete ? [styles.taskText, { opacity: 0.2}] : styles.taskText}>
+                      <Text style={task.complete ? [styles.taskText, {opacity: 0.2}] : styles.taskText}>
                         {task.name}
                       </Text>
                     </Card>
@@ -727,6 +733,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     margin: 5,
     padding: 16,
+    position: 'relative',
+    height: 1,
+    //MAX HEIGHT = 90
   },
   leftAction: {
     flex: 1,
