@@ -11,6 +11,7 @@ const ScheduleScreen = () => {
   const [timeSlots, setTimeSlots] = useState(generateTimeSlots(0));
   const [modalVisible, setModalVisible] = useState(false);
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
+  const [selectedTab, setSelectedTab] = useState("Full Day");
 
   // Task Creation Details
   const [tasks, setTasks] = useState([]);
@@ -460,11 +461,13 @@ const ScheduleScreen = () => {
 
       {/* Tab Selection */}
       <View style={styles.tabContainer}>
-        <TouchableOpacity style={[styles.tab, styles.activeTab]} onPress={() => setTimeSlots(generateTimeSlots(0))}>
-          <Text style={[styles.tabText, styles.activeTabText]}>Full Day</Text>
+        <TouchableOpacity style={[styles.tab, selectedTab === "Full Day" && styles.activeTab]} 
+        onPress={() => [setTimeSlots(generateTimeSlots(0)), setSelectedTab("Full Day")]}>
+          <Text style={[styles.tabText, selectedTab === "Full Day" && styles.activeTabText]}>Full Day</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tab} onPress={() => setTimeSlots(generateTimeSlots(givenHalfTime))}>
-          <Text style={styles.tabText}>Half Day</Text>
+        <TouchableOpacity style={[styles.tab, selectedTab === "Half Day" && styles.activeTab]} 
+        onPress={() => [setTimeSlots(generateTimeSlots(givenHalfTime)), setSelectedTab("Half Day")]}>
+          <Text style={[styles.tabText, selectedTab === "Half Day" && styles.activeTabText]}>Half Day</Text>
         </TouchableOpacity>
       </View>
 
