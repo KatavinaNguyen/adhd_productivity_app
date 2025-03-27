@@ -68,6 +68,7 @@ const ScheduleScreen = () => {
   }).toUpperCase();
 
   // Displays tasks as a card
+  //whaddup
   const Card = ({ children, taskId }) => {
     const task = tasks.find(t => t.id === taskId);
     const completionText = task.complete ? "Undo" : "Complete";
@@ -96,6 +97,20 @@ const ScheduleScreen = () => {
       setTasks(newList);
       setSelectedTask(null);
     }
+
+    //Task Duration in minutes
+    const minCardHeight = 10;
+    const startTime = new Date(task.start);
+    const endTime = new Date(task.end);
+    const duration = [endTime - startTime] / (1000 * 60);
+    const newHeight = duration > 5 ? (duration - 5) * 2 : 0;
+
+    // Adds extra offset (40px) to the card if it passes the 61min threshold
+    let stretchDifference = endTime.getHours() - startTime.getHours();
+    if (stretchDifference > 0 && endTime.getMinutes() === 0) {
+      stretchDifference -= 1; 
+    }
+    const stretchHeight = stretchDifference > 0 ? stretchDifference * 40 : 0;
   
     return (
       <Swipeable
@@ -104,7 +119,7 @@ const ScheduleScreen = () => {
         onSwipeableOpen={(direction) => 
           (direction == "left") ? completeTask() : deleteTask()}
       >
-        <View style={styles.taskCard}>
+        <View style={[styles.taskCard, { height: minCardHeight + newHeight + stretchHeight }]}>
           {children}
         </View>
       </Swipeable>
@@ -489,19 +504,6 @@ const ScheduleScreen = () => {
           const matchTaskTime = tasks.filter((task) => {
             return (task.start).getHours() === currentHour;
           });
-
-          {matchTaskTime.map((task) => {
-            const taskStart = new Date(task.start);
-            const minutesPastHour = taskStart.getMinutes(); // 0-59 minutes into the hour
-            const slotHeight = 500;
-            const taskTopOffset = (minutesPastHour / 60) * slotHeight;
-          
-            return (
-              <View key={task.id} style={[styles.taskCard, { top: taskTopOffset }]}>
-                <Text style={styles.taskText}>{task.name}</Text>
-              </View>
-            );
-          })}
           
           return (
             <View key={index} style={styles.timeSlot}>
@@ -510,7 +512,12 @@ const ScheduleScreen = () => {
               {/* Display tasks within the same hour */}
               {matchTaskTime.length > 0 ? (
                 matchTaskTime.map((task) => (
-                  <TouchableOpacity key={task.id} style={styles.taskContainer} onPress={() => viewTaskDetails(task)} activeOpacity={0.7}>
+                  <TouchableOpacity 
+                    key={task.id} 
+                    style={styles.taskContainer} 
+                    onPress={() => viewTaskDetails(task)} 
+                    activeOpacity={0.7}
+                  >
                     <Card taskId={task.id}>
                       <Text style={task.complete ? [styles.taskText, {opacity: 0.2}] : styles.taskText}>
                         {task.name}
@@ -612,10 +619,11 @@ const styles = StyleSheet.create({
   timeContainer: {
     paddingBottom: 20,
   },
+  //lesgo
   timeSlot: {
     borderBottomWidth: 1,
     borderBottomColor: "#FF7F50",
-    height: 120,
+    height: 150,
     marginTop: 10,
   },
   timeText: {
@@ -731,14 +739,38 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     height: 100,
   },
+  //here
   taskCard: {
     backgroundColor: '#f0eded',
-    borderRadius: 10,
-    margin: 5,
-    padding: 16,
+    //borderRadius: 10,
+    margin: 3,
+    //--
+    padding: 5,
+    paddingLeft: 15, 
+    paddingTop: 15, 
     position: 'relative',
-    height: 1,
-    //MAX HEIGHT = 90
+    height: 120,
+
+    //7:00-7:05, then from 7:05-7:13
+    //5MIN = 10PX - 6=12, 7=14, 8=16, 9=18, 10MIN=20PX
+    //height is coordinated by 2px, base of 10
+
+    //2-hr height: 220px, 3-hr: 350, etc
+    //61min height: 160px, so threshold height is 40px
+    //8:00PM text is on top so make it bottom?
+    //also orange line isnt on top for rest of 7pm?
+    //PADDING to differentiate different task times
+
+    /*
+    5 minute increments = 10 px wide
+    afterwards: 1MIN = 2PX
+    60min = 120
+    threshold: 40px
+    61min: 162px
+    
+    if task starts at 8:01PM, the task shld be 2px away from the 8PM text
+
+    */
   },
   leftAction: {
     flex: 1,
