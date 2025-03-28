@@ -127,7 +127,7 @@ const ScheduleScreen = () => {
         dateTime: task.end,
         timeZone: 'UTC',
       },
-      colorId: task.priority,
+      colorId: getColorID(task),
     };       
     try {
       console.log("Sending request to create event with details:", eventDetails);
@@ -155,6 +155,18 @@ const ScheduleScreen = () => {
       return null;
     }
   };
+
+  const getColorID = (task) => {
+    if (task.isComplete) { 
+      return 8; 
+    } else {
+      if (task.priority == "5" || task.priority == "4") {
+        return task.priority;
+      } else {
+        return 2; //default = low = green
+      }
+    }
+  }
 
   // Handles task editing
   const editTask = (task) => {
@@ -223,7 +235,7 @@ const ScheduleScreen = () => {
             dateTime: task.end,
             timeZone: 'UTC',
         },
-        colorId: task.priority,
+        colorId: getColorID(task),
     };
 
     try {
@@ -278,12 +290,13 @@ const ScheduleScreen = () => {
       </View>
     );
     //MARKS TASK AS COMPLETE
-    const completeTask = () => {
+    const completeTask = async ()  => {
       const updatedTasks = tasks.map(t => 
         t.id === task.id ? { ...t, complete: !t.complete } : t
       );
       setTasks(updatedTasks);
       setSelectedTask(null);
+
     }
     //PERMANENTLY DELETES TASK
     const deleteTask = () => {
@@ -305,16 +318,7 @@ const ScheduleScreen = () => {
       stretchDifference--;
     }
     const stretchHeight = stretchDifference > 0 ? stretchDifference * 40 : 0;
-    const cardHeight = minCardHeight + newHeight + stretchHeight; 
-    
-    /*if (selectedTab === "Full Day") {
-      const positionSkip = task.start.getHours() * 160 + task.start.getMinutes() * 2;
-      topPosition = baseTop + positionSkip;
-      console.log("task start: ", task.start.toLocaleTimeString(), " and position: ", topPosition);
-    } else {
-      const positionSkip = [ task.start.getHours() - givenHalfTime] * 160 + task.start.getMinutes() * 2;
-      topPosition = baseTop + positionSkip;
-    }*/
+    const cardHeight = minCardHeight + newHeight + stretchHeight;
 
     const topPosition = calculateTopPosition(task.id);
     
@@ -348,37 +352,77 @@ const ScheduleScreen = () => {
     const calculateTopPosition = (taskId) => {
       const baseTop = 30;
       let topPosition = 0;
-
+    
       const task = tasks.find(t => t.id === taskId);
       const taskIndex = tasks.findIndex(t => t.id === taskId);
-      if (taskIndex > 0) { //NOT the first task in our list
-        const prevTask = tasks[taskIndex - 1];
-        const prevEnd = new Date(prevTask.end);
-
-        const gapinMin = (task.start - prevEnd) / (1000*60);
-        const gapStretchDifference = task.start.getHours() - prevEnd.getHours();
-
-        if (task.start.getHours() == prevEnd.getHours()) {
-          if (prevEnd.getMinutes() == 0 || task.start.getMinutes() == 0) {
-            topPosition = gapinMin * 2 + 40;
+    
+      const halfDayTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), givenHalfTime, 0, 0, 0);
+      if (selectedTab === 'Half Day') {
+        if (task.start >= halfDayTime) {
+          const remainingTasks = tasks.filter(t => t.start >= halfDayTime);
+          const newTaskIndex = remainingTasks.findIndex(t => t.id === taskId);
+          
+          const subtractPosition = givenHalfTime * 160;
+          
+          if (newTaskIndex > 0) { // NOT the first task in our new list
+            const prevTask = remainingTasks[newTaskIndex - 1];
+            const prevEnd = new Date(prevTask.end);
+    
+            const gapinMin = (task.start - prevEnd) / (1000*60);
+            const gapStretchDifference = task.start.getHours() - prevEnd.getHours();
+    
+            if (task.start.getHours() === prevEnd.getHours()) {
+              if (prevEnd.getMinutes() === 0 || task.start.getMinutes() === 0) {
+                topPosition = gapinMin * 2 + 40;
+              } else {
+                topPosition = gapinMin * 2;
+              }
+            } else { 
+              topPosition = (gapinMin * 2) + gapStretchDifference * 40;
+              if (prevEnd.getMinutes() === 0 || task.start.getMinutes() === 0) {
+                topPosition += 40;
+              }
+            }
+            if (gapinMin <= 5) {
+              topPosition += gapinMin;
+            }
           } else {
-            topPosition = gapinMin * 2;
+            topPosition = baseTop + (task.start.getHours() * 160 + task.start.getMinutes() * 2) - subtractPosition;
           }
-        } else { 
-          topPosition = (gapinMin * 2) + gapStretchDifference * 40;
-          if (prevEnd.getMinutes() == 0 || task.start.getMinutes() == 0) {
-            topPosition += 40;
-          }
-        }
-        if (gapinMin <= 5) {
-          topPosition += gapinMin;
+        } else {
+          topPosition = baseTop + (task.start.getHours() * 160 + task.start.getMinutes() * 2);
         }
       } else {
-        topPosition = baseTop + (task.start.getHours() * 160 + task.start.getMinutes() * 2);
+        if (taskIndex > 0) { // NOT the first task in our list
+          const prevTask = tasks[taskIndex - 1];
+          const prevEnd = new Date(prevTask.end);
+    
+          const gapinMin = (task.start - prevEnd) / (1000*60);
+          const gapStretchDifference = task.start.getHours() - prevEnd.getHours();
+    
+          if (task.start.getHours() === prevEnd.getHours()) {
+            if (prevEnd.getMinutes() === 0 || task.start.getMinutes() === 0) {
+              topPosition = gapinMin * 2 + 40;
+            } else {
+              topPosition = gapinMin * 2;
+            }
+          } else { 
+            topPosition = (gapinMin * 2) + gapStretchDifference * 40;
+            if (prevEnd.getMinutes() === 0 || task.start.getMinutes() === 0) {
+              topPosition += 40;
+            }
+          }
+          if (gapinMin <= 5) {
+            topPosition += gapinMin;
+          }
+        } else {
+          topPosition = baseTop + (task.start.getHours() * 160 + task.start.getMinutes() * 2);
+        }
       }
-
+    
       return topPosition;
     };
+    
 
   return (
     <View style={styles.container}>
@@ -595,7 +639,15 @@ const ScheduleScreen = () => {
               style={styles.taskOverlay}
             >
               <View style={{ flex: 1, flexDirection: 'column'}}>
-                {tasks.map((task) => (
+                {tasks
+                  .filter(task => {
+                    if (selectedTab === "Half Day") {
+                      const taskStart = task.start.getHours();
+                      return taskStart >= givenHalfTime;
+                    }
+                    return true;
+                  }) 
+                  .map((task) => (
                     <Card key={task.id} taskId={task.id}>
                       <Text style={task.complete ? [styles.taskText, { opacity: 0.2 }] : styles.taskText}>
                         {task.name}
@@ -615,8 +667,6 @@ const ScheduleScreen = () => {
 
         </ScrollView>
       </View>
-
-
     </View>
   );
 };
