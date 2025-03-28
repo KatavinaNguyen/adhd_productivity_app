@@ -35,8 +35,8 @@ const ScheduleScreen = () => {
   ];
 
   // Time Setting (dates in UTC)
-  const givenHalfTime = 17; //in 24hrs
-  const today = new Date();
+  const givenHalfTime = 14; //in 24hrs
+  const today = new Date(2025, 3, 27, 14, 0, 0);
   const [startTime, setStartTime] = useState(new Date(
     today.getFullYear(),
     today.getMonth(),
@@ -65,66 +65,7 @@ const ScheduleScreen = () => {
     month: "short",
     day: "2-digit",
     year: "numeric",
-  }).toUpperCase();
-
-  // Displays tasks as a card
-  //whaddup
-  const Card = ({ children, taskId }) => {
-    const task = tasks.find(t => t.id === taskId);
-    const completionText = task.complete ? "Undo" : "Complete";
-    const renderLeftActions = () => (
-      <View style={styles.leftAction}>
-        <Text style={styles.completeText}>{completionText}</Text>
-      </View>
-    );  
-    const renderRightActions = () => (
-      <View style={styles.rightAction}>
-        <Text style={styles.deleteText}>Delete</Text>
-      </View>
-    );
-    //MARKS TASK AS COMPLETE
-    const completeTask = () => {
-      const updatedTasks = tasks.map(t => 
-        t.id === task.id ? { ...t, complete: !t.complete } : t
-      );
-      setTasks(updatedTasks);
-      setSelectedTask(null);
-    }
-    //PERMANENTLY DELETES TASK
-    const deleteTask = () => {
-      console.log("task deleted.. task deleted: ", taskId);
-      const newList = tasks.filter((item) => item.id !== taskId);
-      setTasks(newList);
-      setSelectedTask(null);
-    }
-
-    //Task Duration in minutes
-    const minCardHeight = 10;
-    const startTime = new Date(task.start);
-    const endTime = new Date(task.end);
-    const duration = [endTime - startTime] / (1000 * 60);
-    const newHeight = duration > 5 ? (duration - 5) * 2 : 0;
-
-    // Adds extra offset (40px) to the card if it passes the 61min threshold
-    let stretchDifference = endTime.getHours() - startTime.getHours();
-    if (stretchDifference > 0 && endTime.getMinutes() === 0) {
-      stretchDifference -= 1; 
-    }
-    const stretchHeight = stretchDifference > 0 ? stretchDifference * 40 : 0;
-  
-    return (
-      <Swipeable
-        renderLeftActions={renderLeftActions}
-        renderRightActions={renderRightActions}
-        onSwipeableOpen={(direction) => 
-          (direction == "left") ? completeTask() : deleteTask()}
-      >
-        <View style={[styles.taskCard, { height: minCardHeight + newHeight + stretchHeight }]}>
-          {children}
-        </View>
-      </Swipeable>
-    );
-  };
+  }).toUpperCase();  
 
   // Handles task creation
   const createTask = async () => {
@@ -300,6 +241,93 @@ const ScheduleScreen = () => {
     setSelectedTask(task);
     setDetailsModalVisible(true);
   };
+  //whaddup!
+  const Card = ({ children, taskId, onPress }) => {
+    const task = tasks.find(t => t.id === taskId);
+    const completionText = task.complete ? "Undo" : "Complete";
+    const renderLeftActions = () => (
+      <View style={styles.leftAction}>
+        <Text style={styles.completeText}>{completionText}</Text>
+      </View>
+    );
+    const renderRightActions = () => (
+      <View style={styles.rightAction}>
+        <Text style={styles.deleteText}>Delete</Text>
+      </View>
+    );
+    //MARKS TASK AS COMPLETE
+    const completeTask = () => {
+      const updatedTasks = tasks.map(t => 
+        t.id === task.id ? { ...t, complete: !t.complete } : t
+      );
+      setTasks(updatedTasks);
+      setSelectedTask(null);
+    }
+    //PERMANENTLY DELETES TASK
+    const deleteTask = () => {
+      console.log("task deleted.. task deleted: ", taskId);
+      const newList = tasks.filter((item) => item.id !== taskId);
+      setTasks(newList);
+      setSelectedTask(null);
+    }
+
+    //Task Duration in minutes
+    const minCardHeight = 10;
+    const startTime = new Date(task.start);
+    const endTime = new Date(task.end);
+    const duration = [endTime - startTime] / (1000 * 60);
+    const newHeight = duration > 5 ? (duration - 5) * 2 : 0;
+
+    // Adds extra offset (40px) to the card if it passes the 61min threshold
+    let stretchDifference = endTime.getHours() - startTime.getHours();
+    if (stretchDifference > 0 && endTime.getMinutes() === 0) {
+      stretchDifference -= 1; 
+    }
+    const stretchHeight = stretchDifference > 0 ? stretchDifference * 40 : 0;
+    const cardHeight = minCardHeight + newHeight + stretchHeight; 
+
+    // Calculates position on the timeline 
+    let topPosition = 30;
+    if (selectedTab === "Full Day") {
+      //base height is 30, inside is 120, then another 40 to get to the inside of another hr
+      const positionSkip = task.start.getHours() * 160;
+      topPosition += positionSkip;
+      //every hour is 160
+    } else {
+      console.log("half day");
+    }
+  
+    return (
+    <View style={{position: 'relative', marginTop: topPosition, width: '100%', height: cardHeight}}>
+        <Swipeable
+          renderLeftActions={renderLeftActions}
+          renderRightActions={renderRightActions}
+          onSwipeableOpen={(direction) => 
+            (direction == "left") ? completeTask() : deleteTask()}
+          style={{position: 'absolute', top: 10}}
+        >
+          <TouchableOpacity 
+            style={[styles.taskCard, { height: cardHeight }]}
+            onPress={() => 
+              {console.log("Card clicked!"); 
+              viewTaskDetails(task)}
+            }
+            activeOpacity={0.7}
+          >
+            {children}
+          </TouchableOpacity>
+        </Swipeable>
+      </View>
+    );
+  };
+
+
+  const calculateTopPosition = (task) => {
+    print(task);
+  };
+
+
+  
   
   return (
     <View style={styles.container}>
@@ -380,7 +408,7 @@ const ScheduleScreen = () => {
                   setStartPickerOpen(false);
                   setStartTime(selectedStartTime);
                   if (selectedStartTime >= endTime) {
-                    setEndTime(new Date(selectedStartTime.getTime() + 60000));
+                    setEndTime(new Date(selectedStartTime.getTime() + 300000));
                   }
                 }}
                 onCancel={() => {setStartPickerOpen(false)}}
@@ -394,7 +422,7 @@ const ScheduleScreen = () => {
                 open={endPickerOpen}
                 date={endTime}
                 mode="time"
-                minimumDate = {new Date(startTime.getTime() + 60000)}
+                minimumDate = {new Date(startTime.getTime() + 300000)}
                 onConfirm={(selectedEndTime) => {
                   setEndPickerOpen(false);
                   setEndTime(selectedEndTime);
@@ -489,55 +517,52 @@ const ScheduleScreen = () => {
       {/* Current Date */}
       <Text style={styles.dateText}>{formattedDate}</Text>
 
-      {/* Time Slots */}
-      <ScrollView contentContainerStyle={styles.timeContainer}>
-        {timeSlots.map((time, index) => {
-          //time = XX:XX AM/PM
-          const [hourMinute, period] = time.split(" ");
-          const [hour, minute] = hourMinute.split(":").map(Number);
 
-          // Converting to 24hr time
-          let currentHour = hour;
-          if (period === "PM" && hour !== 12) currentHour += 12;
-          if (period === "AM" && hour === 12) currentHour = 0;
 
-          const matchTaskTime = tasks.filter((task) => {
-            return (task.start).getHours() === currentHour;
-          });
-          
-          return (
-            <View key={index} style={styles.timeSlot}>
-              <Text style={styles.timeText}>{time}</Text>
 
-              {/* Display tasks within the same hour */}
-              {matchTaskTime.length > 0 ? (
-                matchTaskTime.map((task) => (
-                  <TouchableOpacity 
-                    key={task.id} 
-                    style={styles.taskContainer} 
-                    onPress={() => viewTaskDetails(task)} 
-                    activeOpacity={0.7}
-                  >
-                    <Card taskId={task.id}>
-                      <Text style={task.complete ? [styles.taskText, {opacity: 0.2}] : styles.taskText}>
-                        {task.name}
-                      </Text>
-                    </Card>
-                  </TouchableOpacity>
-                ))
-              ) : (
-                <></>
-              )}
-            </View>
-          );
-        })}
-        {/* End Day Button */}
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/DailyReflection")}>
-            <Text style={styles.actionButtonText}>End Day</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+      <View style={styles.container}>
+        {/* Container ScrollView */}
+        <ScrollView contentContainerStyle={styles.scrollContainer} scrollEventThrottle={16} style={{height: '100%'}}>
+          <View style={{ flexDirection: "row", position: "relative" }}>
+            
+            {/* Time Slots */}
+            <ScrollView scrollEnabled={false} contentContainerStyle={styles.timeSlotContainer}>
+              {timeSlots.map((time, index) => (
+                <View key={index} style={styles.timeSlot}>
+                  <Text style={styles.timeText}>{time}</Text>
+                </View>
+              ))}
+            </ScrollView>
+
+            {/* Task Cards */}
+            <ScrollView 
+              scrollEnabled={false} 
+              contentContainerStyle={styles.taskCardContainer} 
+              style={styles.taskOverlay}
+            >
+              {tasks.map((task) => {
+                return (
+                  <Card key={task.id} taskId={task.id}>
+                    <Text style={task.complete ? [styles.taskText, { opacity: 0.2 }] : styles.taskText}>
+                      {task.name}
+                    </Text>
+                  </Card>
+                );
+              })}
+            </ScrollView>
+          </View>
+
+          {/* End Day Button */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/DailyReflection")}>
+              <Text style={styles.actionButtonText}>End Day</Text>
+            </TouchableOpacity>
+          </View>
+
+        </ScrollView>
+      </View>
+
+
     </View>
   );
 };
@@ -618,6 +643,13 @@ const styles = StyleSheet.create({
   },
   timeContainer: {
     paddingBottom: 20,
+  },
+  timeSlotContainer: {
+    paddingBottom: 100,
+  },
+  scrollContainer: {
+    paddingBottom: 100,
+    width: '100%',
   },
   //lesgo
   timeSlot: {
@@ -740,6 +772,11 @@ const styles = StyleSheet.create({
     height: 100,
   },
   //here
+  taskContainer: {
+    position: 'relative', 
+    left: 0, 
+    right: 0, 
+  },
   taskCard: {
     backgroundColor: '#f0eded',
     //borderRadius: 10,
@@ -749,7 +786,7 @@ const styles = StyleSheet.create({
     paddingLeft: 15, 
     paddingTop: 15, 
     position: 'relative',
-    height: 120,
+    //height: 120,
 
     //7:00-7:05, then from 7:05-7:13
     //5MIN = 10PX - 6=12, 7=14, 8=16, 9=18, 10MIN=20PX
@@ -771,6 +808,20 @@ const styles = StyleSheet.create({
     if task starts at 8:01PM, the task shld be 2px away from the 8PM text
 
     */
+  },
+  taskCardContainer: {
+    position: "relative", 
+    top: 0, 
+    left: 0, 
+    right: 0, 
+    paddingBottom: 100,
+  },
+  taskOverlay: {
+    position: 'absolute', 
+    top: 0, 
+    left: 0, 
+    right: 0, 
+    zIndex: 10, 
   },
   leftAction: {
     flex: 1,
