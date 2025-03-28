@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import DatePicker from 'react-native-date-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import  Swipeable  from 'react-native-gesture-handler/ReanimatedSwipeable';
+import { Colors } from "react-native/Libraries/NewAppScreen";
 
 const ScheduleScreen = () => {
   // Navigation + Visuals
@@ -330,6 +331,14 @@ const ScheduleScreen = () => {
               activeOpacity={0.7}
             >
               {children}
+              <Text 
+                style={[styles.priorityMark, 
+                  { color: task.priority === 4 ? 'red' : (task.priority === 5 ? 'yellow' : 'green'),
+                    opacity: task.complete ? 0.2 : 1
+                  }]}
+              >!
+              </Text>
+
             </TouchableOpacity>
           </Swipeable>
         </View>
@@ -357,7 +366,6 @@ const ScheduleScreen = () => {
           }
         } else { 
           topPosition = (gapinMin * 2) + gapStretchDifference * 40;
-          console.log(task.start.getHours(), " and ", gapinMin);
           if (prevEnd.getMinutes() == 0 || task.start.getMinutes() == 0) {
             topPosition += 40;
           }
@@ -817,7 +825,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     height: 100,
   },
-  //here
   taskContainer: {
     position: 'relative', 
     left: 0, 
@@ -825,35 +832,10 @@ const styles = StyleSheet.create({
   },
   taskCard: {
     backgroundColor: '#f0eded',
-    //borderRadius: 10,
     margin: 3,
-    //--
-    //padding: 5,
     paddingLeft: 15, 
     paddingTop: 15, 
     position: 'relative',
-    //height: 120,
-
-    //7:00-7:05, then from 7:05-7:13
-    //5MIN = 10PX - 6=12, 7=14, 8=16, 9=18, 10MIN=20PX
-    //height is coordinated by 2px, base of 10
-
-    //2-hr height: 220px, 3-hr: 350, etc
-    //61min height: 160px, so threshold height is 40px
-    //8:00PM text is on top so make it bottom?
-    //also orange line isnt on top for rest of 7pm?
-    //PADDING to differentiate different task times
-
-    /*
-    5 minute increments = 10 px wide
-    afterwards: 1MIN = 2PX
-    60min = 120
-    threshold: 40px
-    61min: 162px
-    
-    if task starts at 8:01PM, the task shld be 2px away from the 8PM text
-
-    */
   },
   taskCardContainer: {
     position: "relative", 
@@ -889,7 +871,15 @@ const styles = StyleSheet.create({
   detailButton: {
     fontSize: 16,
     marginBottom: 10,
-  }
+  },
+  priorityMark: {
+    position: 'absolute', 
+    right: 10, 
+    fontSize: 30,
+    paddingRight: 15, 
+    paddingTop: 10, 
+    fontWeight: 'bold',
+  },
 });
 
 export default ScheduleScreen;
