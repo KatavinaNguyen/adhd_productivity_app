@@ -225,6 +225,16 @@ const ScheduleScreen = () => {
 
       await updateGoogleCalendarEvent(updatedTask);
 
+      //update task in local storage
+      if (selectedTask.id !== null) {
+        tasksStorage.set(selectedTask.id, JSON.stringify(updatedTask));
+        console.log("Task updated with id:", selectedTask.id);
+        let taskDet = tasksStorage.getString(selectedTask.id);
+        console.log("Updated Task Details: ", JSON.parse(taskDet));
+      } else {
+        console.error("Task ID is null, cannot update in local storage.");
+      }
+
       const updatedTasks = tasks.map(task => task.id === updatedTask.id ? updatedTask : task);
       updatedTasks.sort((a,b) => new Date(a.start) - new Date(b.start));
 
