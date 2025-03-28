@@ -325,11 +325,26 @@ const ScheduleScreen = () => {
 
     }
     //PERMANENTLY DELETES TASK
-    const deleteTask = () => {
-      console.log("task deleted.. task deleted: ", taskId);
-      const newList = tasks.filter((item) => item.id !== taskId);
-      setTasks(newList);
-      setSelectedTask(null);
+    const deleteTask = async () => {
+      const accessToken = await AsyncStorage.getItem('accessToken');
+      // Remove the task from Google Calendar if it has an id
+      try {
+        const response = await fetch("http://127.0.0.1:3000/google/calendar/delete_event", {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ eventId: taskId }),
+        });
+        console.log("task deleted.. task deleted: ", taskId);
+        const newList = tasks.filter((item) => item.id !== taskId);
+        setTasks(newList);
+        setSelectedTask(null);
+      }
+      catch (error) {
+        console.error("Error deleting event from Google Calendar:", error);
+      }
     }
     //Task Duration in minutes
     const minCardHeight = 10;
