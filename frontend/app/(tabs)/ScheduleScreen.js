@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import DatePicker from 'react-native-date-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import  Swipeable  from 'react-native-gesture-handler/ReanimatedSwipeable';
+import { Colors } from "react-native/Libraries/NewAppScreen";
 
 const ScheduleScreen = () => {
   // Navigation + Visuals
@@ -11,6 +12,7 @@ const ScheduleScreen = () => {
   const [timeSlots, setTimeSlots] = useState(generateTimeSlots(0));
   const [modalVisible, setModalVisible] = useState(false);
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
+  const [selectedTab, setSelectedTab] = useState("Full Day");
 
   // Task Creation Details
   const [tasks, setTasks] = useState([]);
@@ -34,7 +36,7 @@ const ScheduleScreen = () => {
   ];
 
   // Time Setting (dates in UTC)
-  const givenHalfTime = 17; //in 24hrs
+  const givenHalfTime = 14; //in 24hrs
   const today = new Date();
   const [startTime, setStartTime] = useState(new Date(
     today.getFullYear(),
@@ -64,51 +66,7 @@ const ScheduleScreen = () => {
     month: "short",
     day: "2-digit",
     year: "numeric",
-  }).toUpperCase();
-
-  // Displays tasks as a card
-  const Card = ({ children, taskId }) => {
-    const task = tasks.find(t => t.id === taskId);
-    const completionText = task.complete ? "Undo" : "Complete";
-    const renderLeftActions = () => (
-      <View style={styles.leftAction}>
-        <Text style={styles.completeText}>{completionText}</Text>
-      </View>
-    );  
-    const renderRightActions = () => (
-      <View style={styles.rightAction}>
-        <Text style={styles.deleteText}>Delete</Text>
-      </View>
-    );
-    //MARKS TASK AS COMPLETE
-    const completeTask = () => {
-      const updatedTasks = tasks.map(t => 
-        t.id === task.id ? { ...t, complete: !t.complete } : t
-      );
-      setTasks(updatedTasks);
-      /* Mark as complete in google calendar */
-    }
-    //PERMANENTLY DELETES TASK
-    const deleteTask = () => {
-      console.log("task deleted.. task deleted: ", taskId);
-      const newList = tasks.filter((item) => item.id !== taskId);
-      setTasks(newList);
-      /* Delete from google calendar */
-    }
-  
-    return (
-      <Swipeable
-        renderLeftActions={renderLeftActions}
-        renderRightActions={renderRightActions}
-        onSwipeableOpen={(direction) => 
-          (direction == "left") ? completeTask() : deleteTask()}
-      >
-        <View style={styles.taskCard}>
-          {children}
-        </View>
-      </Swipeable>
-    );
-  };
+  }).toUpperCase();  
 
   // Handles task creation
   const createTask = async () => {
@@ -141,23 +99,17 @@ const ScheduleScreen = () => {
 
       //stores the calendar event's id inside of our task's googleId property
       newTask.id = await createGoogleCalendarEvent(newTask);
-      
-      setTasks([...tasks, newTask]);
+
+      const newTasks = [...tasks, newTask].sort((a,b) => new Date(a.start) - new Date(b.start));   
+      setTasks(newTasks);
       console.log(newTask);
+      console.log(newTasks);
 
     } catch (error) {
       console.error("Error occurred: ", error);
     }
 
     // Resets settings for a new task to be created
-    setTaskName("");
-    setDescription("Description");
-    setPriority(2);
-    setSelectedPriority(2);
-    setStartTime(new Date(today.getFullYear(), today.getMonth(), today.getDate(), today.getHours() + 1, 0,));
-    setEndTime(new Date(today.getFullYear(), today.getMonth(), today.getDate(), startTime.getHours() + 1, 0,));
-    setComplete(false);
-    setModalVisible(false);
     resetTaskForm();
   };
 
@@ -175,12 +127,12 @@ const ScheduleScreen = () => {
         dateTime: task.end,
         timeZone: 'UTC',
       },
-      colorId: task.priority,
+      colorId: getColorID(task),
     };       
     try {
       console.log("Sending request to create event with details:", eventDetails);
       // Local Address for Mac's: http://127.0.0.1:3000/google/calendar/schedule_event
-      const response = await fetch("http://127.0.0.1:3000/google/calendar/schedule_event", {
+      const response = await fetch("http://10.0.2.2:3000/google/calendar/schedule_event", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${accessToken}`,
@@ -204,6 +156,18 @@ const ScheduleScreen = () => {
     }
   };
 
+  const getColorID = (task) => {
+    if (task.isComplete) { 
+      return 8; 
+    } else {
+      if (task.priority == "5" || task.priority == "4") {
+        return task.priority;
+      } else {
+        return 2; //default = low = green
+      }
+    }
+  }
+
   // Handles task editing
   const editTask = (task) => {
     setSelectedTask(task);
@@ -218,6 +182,22 @@ const ScheduleScreen = () => {
 
   const updateTask = async () => {
     try {
+      const checkOverlap = tasks.some((task) => {
+        if (selectedTask === task) {
+          return;
+        }
+        return (
+          (startTime <= task.start && endTime >= task.end) ||
+          (startTime >= task.start && startTime < task.end) ||
+          (endTime > task.start && endTime <= task.end)
+        );
+      });
+
+      if (checkOverlap) {
+        alert("Overlap Error -- Please select another time slot");
+        return;
+      }
+
       const updatedTask = {
         ...selectedTask,
         name: taskName,
@@ -229,9 +209,11 @@ const ScheduleScreen = () => {
 
       await updateGoogleCalendarEvent(updatedTask);
 
-      setTasks(tasks.map(task => task.id === updatedTask.id ? updatedTask : task));
-      setSelectedTask(null);
-      setModalVisible(false);
+      const updatedTasks = tasks.map(task => task.id === updatedTask.id ? updatedTask : task);
+      updatedTasks.sort((a,b) => new Date(a.start) - new Date(b.start));
+
+      setTasks(updatedTasks);
+      resetTaskForm();
     } catch (error) {
       console.error("Error occurred: ", error);
     }
@@ -253,12 +235,12 @@ const ScheduleScreen = () => {
             dateTime: task.end,
             timeZone: 'UTC',
         },
-        colorId: task.priority,
+        colorId: getColorID(task),
     };
 
     try {
         console.log("Sending request to update event with details:", eventDetails);
-        const response = await fetch("http://127.0.0.1:3000/google/calendar/update_event", {
+        const response = await fetch("http://10.0.2.2:3000/google/calendar/update_event", {
             method: "PUT",
             headers: {
                 "Authorization": `Bearer ${accessToken}`,
@@ -280,11 +262,12 @@ const ScheduleScreen = () => {
 
   const resetTaskForm = () => {
     setTaskName("");
-    setDescription("Description");
+    setDescription("");
     setPriority(2);
     setSelectedPriority(2);
     setStartTime(new Date(today.getFullYear(), today.getMonth(), today.getDate(), today.getHours() + 1, 0,));
     setEndTime(new Date(today.getFullYear(), today.getMonth(), today.getDate(), startTime.getHours() + 1, 0,));
+    setSelectedTask(null);
     setModalVisible(false);
   };
 
@@ -292,7 +275,155 @@ const ScheduleScreen = () => {
     setSelectedTask(task);
     setDetailsModalVisible(true);
   };
-  
+
+  const Card = ({ children, taskId, onPress }) => {
+    const task = tasks.find(t => t.id === taskId);
+    const completionText = task.complete ? "Undo" : "Complete";
+    const renderLeftActions = () => (
+      <View style={styles.leftAction}>
+        <Text style={styles.completeText}>{completionText}</Text>
+      </View>
+    );
+    const renderRightActions = () => (
+      <View style={styles.rightAction}>
+        <Text style={styles.deleteText}>Delete</Text>
+      </View>
+    );
+    //MARKS TASK AS COMPLETE
+    const completeTask = async ()  => {
+      const updatedTasks = tasks.map(t => 
+        t.id === task.id ? { ...t, complete: !t.complete } : t
+      );
+      setTasks(updatedTasks);
+      setSelectedTask(null);
+
+    }
+    //PERMANENTLY DELETES TASK
+    const deleteTask = () => {
+      console.log("task deleted.. task deleted: ", taskId);
+      const newList = tasks.filter((item) => item.id !== taskId);
+      setTasks(newList);
+      setSelectedTask(null);
+    }
+    //Task Duration in minutes
+    const minCardHeight = 10;
+    const startTime = new Date(task.start);
+    const endTime = new Date(task.end);
+    const duration = [endTime - startTime] / (1000 * 60);
+    const newHeight = duration > 5 ? (duration - 5) * 2 : 0;
+
+    // Adds extra offset (40px) to the card if it passes the 61min threshold
+    let stretchDifference = endTime.getHours() - startTime.getHours();
+    if ((stretchDifference > 0 && endTime.getMinutes() == 0)) {
+      stretchDifference--;
+    }
+    const stretchHeight = stretchDifference > 0 ? stretchDifference * 40 : 0;
+    const cardHeight = minCardHeight + newHeight + stretchHeight;
+
+    const topPosition = calculateTopPosition(task.id);
+    
+      return (
+        <View style={{ position: 'relative', flex: 1, width: '100%', height: cardHeight, marginTop: topPosition }}>
+          <Swipeable
+            renderLeftActions={renderLeftActions}
+            renderRightActions={renderRightActions}
+            onSwipeableOpen={(direction) => (direction == "left") ? completeTask() : deleteTask()}
+          >
+            <TouchableOpacity 
+              style={[styles.taskCard, { height: cardHeight }]}
+              onPress={() => { viewTaskDetails(task); }}
+              activeOpacity={0.7}
+            >
+              {children}
+              <Text 
+                style={[styles.priorityMark, 
+                  { color: task.priority === 4 ? 'red' : (task.priority === 5 ? 'yellow' : 'green'),
+                    opacity: task.complete ? 0.2 : 1
+                  }]}
+              >!
+              </Text>
+
+            </TouchableOpacity>
+          </Swipeable>
+        </View>
+      );
+    };
+
+    const calculateTopPosition = (taskId) => {
+      const baseTop = 30;
+      let topPosition = 0;
+    
+      const task = tasks.find(t => t.id === taskId);
+      const taskIndex = tasks.findIndex(t => t.id === taskId);
+    
+      const halfDayTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), givenHalfTime, 0, 0, 0);
+      if (selectedTab === 'Half Day') {
+        if (task.start >= halfDayTime) {
+          const remainingTasks = tasks.filter(t => t.start >= halfDayTime);
+          const newTaskIndex = remainingTasks.findIndex(t => t.id === taskId);
+          
+          const subtractPosition = givenHalfTime * 160;
+          
+          if (newTaskIndex > 0) { // NOT the first task in our new list
+            const prevTask = remainingTasks[newTaskIndex - 1];
+            const prevEnd = new Date(prevTask.end);
+    
+            const gapinMin = (task.start - prevEnd) / (1000*60);
+            const gapStretchDifference = task.start.getHours() - prevEnd.getHours();
+    
+            if (task.start.getHours() === prevEnd.getHours()) {
+              if (prevEnd.getMinutes() === 0 || task.start.getMinutes() === 0) {
+                topPosition = gapinMin * 2 + 40;
+              } else {
+                topPosition = gapinMin * 2;
+              }
+            } else { 
+              topPosition = (gapinMin * 2) + gapStretchDifference * 40;
+              if (prevEnd.getMinutes() === 0 || task.start.getMinutes() === 0) {
+                topPosition += 40;
+              }
+            }
+            if (gapinMin <= 5) {
+              topPosition += gapinMin;
+            }
+          } else {
+            topPosition = baseTop + (task.start.getHours() * 160 + task.start.getMinutes() * 2) - subtractPosition;
+          }
+        } else {
+          topPosition = baseTop + (task.start.getHours() * 160 + task.start.getMinutes() * 2);
+        }
+      } else {
+        if (taskIndex > 0) { // NOT the first task in our list
+          const prevTask = tasks[taskIndex - 1];
+          const prevEnd = new Date(prevTask.end);
+    
+          const gapinMin = (task.start - prevEnd) / (1000*60);
+          const gapStretchDifference = task.start.getHours() - prevEnd.getHours();
+    
+          if (task.start.getHours() === prevEnd.getHours()) {
+            if (prevEnd.getMinutes() === 0 || task.start.getMinutes() === 0) {
+              topPosition = gapinMin * 2 + 40;
+            } else {
+              topPosition = gapinMin * 2;
+            }
+          } else { 
+            topPosition = (gapinMin * 2) + gapStretchDifference * 40;
+            if (prevEnd.getMinutes() === 0 || task.start.getMinutes() === 0) {
+              topPosition += 40;
+            }
+          }
+          if (gapinMin <= 5) {
+            topPosition += gapinMin;
+          }
+        } else {
+          topPosition = baseTop + (task.start.getHours() * 160 + task.start.getMinutes() * 2);
+        }
+      }
+    
+      return topPosition;
+    };
+    
+
   return (
     <View style={styles.container}>
       {/* Header Section */}
@@ -307,7 +438,7 @@ const ScheduleScreen = () => {
           <TouchableOpacity onPress={() => router.push("/StampBook")}>
             <Text style={styles.iconText}>📓</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setModalVisible(true)}>
+          <TouchableOpacity onPress={() => [setModalVisible(true), setSelectedTask(null)]}>
             <Text style={styles.iconText}>+</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push("/Settings")}>
@@ -321,7 +452,7 @@ const ScheduleScreen = () => {
         animationType="slide"
         transparent={true}
         visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
+        onRequestClose={() => resetTaskForm()}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
@@ -329,7 +460,7 @@ const ScheduleScreen = () => {
             <View style={styles.buttonRow}>
               <TouchableOpacity
                 style={[styles.button, styles.exitButton]}
-                onPress={() => setModalVisible(false)}
+                onPress={() => resetTaskForm() }
               >
                 <Text style={styles.buttonText}>X</Text>
               </TouchableOpacity>
@@ -361,18 +492,20 @@ const ScheduleScreen = () => {
             <View style={styles.buttonRow}>
               <TouchableOpacity style={styles.timeButton} onPress={() => setStartPickerOpen(true)}>
                 <Text style={styles.buttonText}>{displayStart}</Text>
+              {/* START TIME */}
               <DatePicker
                 modal
                 open={startPickerOpen}
                 date={startTime}
                 mode="time"
                 //Once user clicks on endtime they CANNOT pick a time before the current one
-                minimumDate = {new Date()}
+                minimumDate = {today}
+                maximumDate = {new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 54, 0, 0)}
                 onConfirm={(selectedStartTime) => {
                   setStartPickerOpen(false);
                   setStartTime(selectedStartTime);
-                  if (selectedStartTime >= endTime) {
-                    setEndTime(new Date(selectedStartTime.getTime() + 60000));
+                  if (selectedStartTime.getTime() + 300000 >= endTime) {
+                    setEndTime(new Date(selectedStartTime.getTime() + 300000));
                   }
                 }}
                 onCancel={() => {setStartPickerOpen(false)}}
@@ -381,12 +514,14 @@ const ScheduleScreen = () => {
               <Text style={styles.toText}>to</Text>
               <TouchableOpacity style={styles.timeButton} onPress={() => setEndPickerOpen(true)}>
                 <Text style={styles.buttonText}>{displayEnd}</Text>
+              {/* END TIME */}
               <DatePicker
                 modal
                 open={endPickerOpen}
                 date={endTime}
                 mode="time"
-                minimumDate = {new Date(startTime.getTime() + 60000)}
+                minimumDate = {new Date(startTime.getTime() + 300000)}
+                maximumDate = {new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 0, 0)}
                 onConfirm={(selectedEndTime) => {
                   setEndPickerOpen(false);
                   setEndTime(selectedEndTime);
@@ -438,11 +573,16 @@ const ScheduleScreen = () => {
             {/* Task Details */}
             {selectedTask && (
               <>
-                <Text style={styles.modalTitle}>{selectedTask.name}</Text>
-                <Text style={styles.detailText}>Priority: {selectedTask.priority}</Text>
+                <Text style={styles.modalTitle}>{selectedTask.name}</Text> 
+                <Text style={styles.detailText}>Priority: {
+                  selectedTask.priority == 4 ? <Text>High</Text> : 
+                  (selectedTask.priority == 5 ? <Text>Medium</Text> : 
+                  <Text>Low</Text>)
+                }</Text>
                 <Text style={styles.detailText}>Start Time: {new Date(selectedTask.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</Text>
                 <Text style={styles.detailText}>End Time: {new Date(selectedTask.end).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</Text>
                 <Text style={styles.detailText}>Description: {selectedTask.description}</Text>
+                <Text></Text>
                 {/* Edit Button */}
                 <View style={styles.buttonRow}>
                   <TouchableOpacity
@@ -463,61 +603,70 @@ const ScheduleScreen = () => {
 
       {/* Tab Selection */}
       <View style={styles.tabContainer}>
-        <TouchableOpacity style={[styles.tab, styles.activeTab]} onPress={() => setTimeSlots(generateTimeSlots(0))}>
-          <Text style={[styles.tabText, styles.activeTabText]}>Full Day</Text>
+        <TouchableOpacity style={[styles.tab, selectedTab === "Full Day" && styles.activeTab]} 
+        onPress={() => [setTimeSlots(generateTimeSlots(0)), setSelectedTab("Full Day")]}>
+          <Text style={[styles.tabText, selectedTab === "Full Day" && styles.activeTabText]}>Full Day</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tab} onPress={() => setTimeSlots(generateTimeSlots(givenHalfTime))}>
-          <Text style={styles.tabText}>Half Day</Text>
+        <TouchableOpacity style={[styles.tab, selectedTab === "Half Day" && styles.activeTab]} 
+        onPress={() => [setTimeSlots(generateTimeSlots(givenHalfTime)), setSelectedTab("Half Day")]}>
+          <Text style={[styles.tabText, selectedTab === "Half Day" && styles.activeTabText]}>Half Day</Text>
         </TouchableOpacity>
       </View>
 
       {/* Current Date */}
       <Text style={styles.dateText}>{formattedDate}</Text>
 
-      {/* Time Slots */}
-      <ScrollView contentContainerStyle={styles.timeContainer}>
-        {timeSlots.map((time, index) => {
-          //time = XX:XX AM/PM
-          const [hourMinute, period] = time.split(" ");
-          const [hour, minute] = hourMinute.split(":").map(Number);
 
-          // Converting to 24hr time
-          let currentHour = hour;
-          if (period === "PM" && hour !== 12) currentHour += 12;
-          if (period === "AM" && hour === 12) currentHour = 0;
 
-          const matchTaskTime = tasks.filter((task) => {
-            return (task.start).getHours() === currentHour;
-          });
+      <View style={styles.container}>
+        {/* Container ScrollView */}
+        <ScrollView contentContainerStyle={styles.scrollContainer} scrollEventThrottle={16} style={{height: '100%'}}>
+          <View style={{ flexDirection: "row", position: "relative" }}>
+            
+            {/* Time Slots */}
+            <ScrollView scrollEnabled={false} contentContainerStyle={styles.timeSlotContainer}>
+              {timeSlots.map((time, index) => (
+                <View key={index} style={styles.timeSlot}>
+                  <Text style={styles.timeText}>{time}</Text>
+                </View>
+              ))}
+            </ScrollView>
 
-          return (
-            <View key={index} style={styles.timeSlot}>
-              <Text style={styles.timeText}>{time}</Text>
-
-              {/* Display tasks within the same hour */}
-              {matchTaskTime.length > 0 ? (
-                matchTaskTime.map((task) => (
-                  <TouchableOpacity key={task.id} style={styles.taskContainer} onPress={() => viewTaskDetails(task)} activeOpacity={0.7}>
-                    <Card taskId={task.id}>
-                      <Text style={task.complete ? [styles.taskText, { opacity: 0.2}] : styles.taskText}>
+            {/* Task Cards */}
+            <ScrollView 
+              scrollEnabled={false} 
+              contentContainerStyle={styles.taskCardContainer} 
+              style={styles.taskOverlay}
+            >
+              <View style={{ flex: 1, flexDirection: 'column'}}>
+                {tasks
+                  .filter(task => {
+                    if (selectedTab === "Half Day") {
+                      const taskStart = task.start.getHours();
+                      return taskStart >= givenHalfTime;
+                    }
+                    return true;
+                  }) 
+                  .map((task) => (
+                    <Card key={task.id} taskId={task.id}>
+                      <Text style={task.complete ? [styles.taskText, { opacity: 0.2 }] : styles.taskText}>
                         {task.name}
                       </Text>
                     </Card>
-                  </TouchableOpacity>
-                ))
-              ) : (
-                <></>
-              )}
-            </View>
-          );
-        })}
-        {/* End Day Button */}
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/DailyReflection")}>
-            <Text style={styles.actionButtonText}>End Day</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+
+          {/* End Day Button */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/DailyReflection")}>
+              <Text style={styles.actionButtonText}>End Day</Text>
+            </TouchableOpacity>
+          </View>
+
+        </ScrollView>
+      </View>
     </View>
   );
 };
@@ -599,10 +748,18 @@ const styles = StyleSheet.create({
   timeContainer: {
     paddingBottom: 20,
   },
+  timeSlotContainer: {
+    paddingBottom: 100,
+  },
+  scrollContainer: {
+    paddingBottom: 100,
+    width: '100%',
+  },
+  //lesgo
   timeSlot: {
     borderBottomWidth: 1,
     borderBottomColor: "#FF7F50",
-    height: 120,
+    height: 150,
     marginTop: 10,
   },
   timeText: {
@@ -718,11 +875,28 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     height: 100,
   },
+  taskContainer: {
+    position: 'relative', 
+    left: 0, 
+    right: 0, 
+  },
   taskCard: {
     backgroundColor: '#f0eded',
-    borderRadius: 10,
-    margin: 5,
-    padding: 16, 
+    margin: 3,
+    paddingLeft: 15, 
+    paddingTop: 15, 
+    position: 'relative',
+  },
+  taskCardContainer: {
+    position: "relative", 
+    top: 0, 
+    left: 0, 
+    right: 0, 
+  },
+  taskOverlay: {
+    position: 'absolute', 
+    width: '100%',
+    zIndex: 5, 
   },
   leftAction: {
     flex: 1,
@@ -747,7 +921,15 @@ const styles = StyleSheet.create({
   detailButton: {
     fontSize: 16,
     marginBottom: 10,
-  }
+  },
+  priorityMark: {
+    position: 'absolute', 
+    right: 10, 
+    fontSize: 30,
+    paddingRight: 15, 
+    paddingTop: 10, 
+    fontWeight: 'bold',
+  },
 });
 
 export default ScheduleScreen;
