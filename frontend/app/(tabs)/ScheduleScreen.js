@@ -98,9 +98,11 @@ const ScheduleScreen = () => {
 
       //stores the calendar event's id inside of our task's googleId property
       newTask.id = await createGoogleCalendarEvent(newTask);
-      
-      setTasks([...tasks, newTask]);
+
+      const newTasks = [...tasks, newTask].sort((a,b) => new Date(a.start) - new Date(b.start));   
+      setTasks(newTasks);
       console.log(newTask);
+      console.log(newTasks);
 
     } catch (error) {
       console.error("Error occurred: ", error);
@@ -167,6 +169,22 @@ const ScheduleScreen = () => {
 
   const updateTask = async () => {
     try {
+      const checkOverlap = tasks.some((task) => {
+        if (selectedTask === task) {
+          return;
+        }
+        return (
+          (startTime <= task.start && endTime >= task.end) ||
+          (startTime >= task.start && startTime < task.end) ||
+          (endTime > task.start && endTime <= task.end)
+        );
+      });
+
+      if (checkOverlap) {
+        alert("Overlap Error -- Please select another time slot");
+        return;
+      }
+
       const updatedTask = {
         ...selectedTask,
         name: taskName,
@@ -178,7 +196,10 @@ const ScheduleScreen = () => {
 
       await updateGoogleCalendarEvent(updatedTask);
 
-      setTasks(tasks.map(task => task.id === updatedTask.id ? updatedTask : task));
+      const updatedTasks = tasks.map(task => task.id === updatedTask.id ? updatedTask : task);
+      updatedTasks.sort((a,b) => new Date(a.start) - new Date(b.start));
+
+      setTasks(updatedTasks);
       resetTaskForm();
     } catch (error) {
       console.error("Error occurred: ", error);
@@ -241,7 +262,7 @@ const ScheduleScreen = () => {
     setSelectedTask(task);
     setDetailsModalVisible(true);
   };
-  //whaddup!
+
   const Card = ({ children, taskId, onPress }) => {
     const task = tasks.find(t => t.id === taskId);
     const completionText = task.complete ? "Undo" : "Complete";
@@ -270,7 +291,6 @@ const ScheduleScreen = () => {
       setTasks(newList);
       setSelectedTask(null);
     }
-
     //Task Duration in minutes
     const minCardHeight = 10;
     const startTime = new Date(task.start);
@@ -280,45 +300,77 @@ const ScheduleScreen = () => {
 
     // Adds extra offset (40px) to the card if it passes the 61min threshold
     let stretchDifference = endTime.getHours() - startTime.getHours();
-    if (stretchDifference > 0 && endTime.getMinutes() === 0) {
-      stretchDifference -= 1; 
+    if ((stretchDifference > 0 && endTime.getMinutes() == 0)) {
+      stretchDifference--;
     }
     const stretchHeight = stretchDifference > 0 ? stretchDifference * 40 : 0;
     const cardHeight = minCardHeight + newHeight + stretchHeight; 
-
-    // Calculates position on the timeline 
-    const baseTop = 30;
-    let topPosition = baseTop;
-    if (selectedTab === "Full Day") {
+    
+    /*if (selectedTab === "Full Day") {
       const positionSkip = task.start.getHours() * 160 + task.start.getMinutes() * 2;
       topPosition = baseTop + positionSkip;
+      console.log("task start: ", task.start.toLocaleTimeString(), " and position: ", topPosition);
     } else {
-      console.log("half day");
-    }
-  
-    return (
-    <View style={{position: 'relative', marginTop: topPosition, width: '100%', height: cardHeight}}>
-        <Swipeable
-          renderLeftActions={renderLeftActions}
-          renderRightActions={renderRightActions}
-          onSwipeableOpen={(direction) => 
-            (direction == "left") ? completeTask() : deleteTask()}
-          style={{position: 'absolute', top: 10}}
-        >
-          <TouchableOpacity 
-            style={[styles.taskCard, { height: cardHeight }]}
-            onPress={() => 
-              {console.log("Card clicked!"); 
-              viewTaskDetails(task)}
-            }
-            activeOpacity={0.7}
+      const positionSkip = [ task.start.getHours() - givenHalfTime] * 160 + task.start.getMinutes() * 2;
+      topPosition = baseTop + positionSkip;
+    }*/
+
+    const topPosition = calculateTopPosition(task.id);
+    
+      return (
+        <View style={{ position: 'relative', flex: 1, width: '100%', height: cardHeight, marginTop: topPosition }}>
+          <Swipeable
+            renderLeftActions={renderLeftActions}
+            renderRightActions={renderRightActions}
+            onSwipeableOpen={(direction) => (direction == "left") ? completeTask() : deleteTask()}
           >
-            {children}
-          </TouchableOpacity>
-        </Swipeable>
-      </View>
-    );
-  };
+            <TouchableOpacity 
+              style={[styles.taskCard, { height: cardHeight }]}
+              onPress={() => { viewTaskDetails(task); }}
+              activeOpacity={0.7}
+            >
+              {children}
+            </TouchableOpacity>
+          </Swipeable>
+        </View>
+      );
+    };
+
+    const calculateTopPosition = (taskId) => {
+      const baseTop = 30;
+      let topPosition = 0;
+
+      const task = tasks.find(t => t.id === taskId);
+      const taskIndex = tasks.findIndex(t => t.id === taskId);
+      if (taskIndex > 0) { //NOT the first task in our list
+        const prevTask = tasks[taskIndex - 1];
+        const prevEnd = new Date(prevTask.end);
+
+        const gapinMin = (task.start - prevEnd) / (1000*60);
+        const gapStretchDifference = task.start.getHours() - prevEnd.getHours();
+
+        if (task.start.getHours() == prevEnd.getHours()) {
+          if (prevEnd.getMinutes() == 0 || task.start.getMinutes() == 0) {
+            topPosition = gapinMin * 2 + 40;
+          } else {
+            topPosition = gapinMin * 2;
+          }
+        } else { 
+          topPosition = (gapinMin * 2) + gapStretchDifference * 40;
+          console.log(task.start.getHours(), " and ", gapinMin);
+          if (prevEnd.getMinutes() == 0 || task.start.getMinutes() == 0) {
+            topPosition += 40;
+          }
+        }
+        if (gapinMin <= 5) {
+          topPosition += gapinMin;
+        }
+      } else {
+        topPosition = baseTop + (task.start.getHours() * 160 + task.start.getMinutes() * 2);
+      }
+
+      return topPosition;
+    };
 
   return (
     <View style={styles.container}>
@@ -400,7 +452,7 @@ const ScheduleScreen = () => {
                 onConfirm={(selectedStartTime) => {
                   setStartPickerOpen(false);
                   setStartTime(selectedStartTime);
-                  if (selectedStartTime >= endTime) {
+                  if (selectedStartTime.getTime() + 300000 >= endTime) {
                     setEndTime(new Date(selectedStartTime.getTime() + 300000));
                   }
                 }}
@@ -514,7 +566,6 @@ const ScheduleScreen = () => {
 
 
 
-
       <View style={styles.container}>
         {/* Container ScrollView */}
         <ScrollView contentContainerStyle={styles.scrollContainer} scrollEventThrottle={16} style={{height: '100%'}}>
@@ -535,15 +586,15 @@ const ScheduleScreen = () => {
               contentContainerStyle={styles.taskCardContainer} 
               style={styles.taskOverlay}
             >
-              {tasks.map((task) => {
-                return (
-                  <Card key={task.id} taskId={task.id}>
-                    <Text style={task.complete ? [styles.taskText, { opacity: 0.2 }] : styles.taskText}>
-                      {task.name}
-                    </Text>
-                  </Card>
-                );
-              })}
+              <View style={{ flex: 1, flexDirection: 'column'}}>
+                {tasks.map((task) => (
+                    <Card key={task.id} taskId={task.id}>
+                      <Text style={task.complete ? [styles.taskText, { opacity: 0.2 }] : styles.taskText}>
+                        {task.name}
+                      </Text>
+                    </Card>
+                ))}
+              </View>
             </ScrollView>
           </View>
 
@@ -777,7 +828,7 @@ const styles = StyleSheet.create({
     //borderRadius: 10,
     margin: 3,
     //--
-    padding: 5,
+    //padding: 5,
     paddingLeft: 15, 
     paddingTop: 15, 
     position: 'relative',
@@ -809,14 +860,11 @@ const styles = StyleSheet.create({
     top: 0, 
     left: 0, 
     right: 0, 
-    paddingBottom: 100,
   },
   taskOverlay: {
     position: 'absolute', 
-    top: 0, 
-    left: 0, 
-    right: 0, 
-    zIndex: 10, 
+    width: '100%',
+    zIndex: 5, 
   },
   leftAction: {
     flex: 1,
