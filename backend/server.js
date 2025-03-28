@@ -148,15 +148,19 @@ app.put("/google/calendar/update_event", async (req, res) => {
 });
 
 // Delete Event from Google Calendar
-app.get("/google/calendar/delete_event", async (req, res) => {
+app.delete("/google/calendar/delete_event", async (req, res) => {
     try {
-        const events = await getListOfEventsFromGoogle('primary', oauth2Client, true, 'Test event', 3);
-        if (!events.data.items.length) throw new Error("No events found");
+        const accessToken = req.headers.authorization?.split(" ")[1];
+        if (!accessToken) {
+            return res.status(401).json({ error: "Missing access token" });
+        }
+
+        oauth2Client.setCredentials({ access_token: accessToken });
 
         await calendar.events.delete({
             calendarId: 'primary',
             auth: oauth2Client,
-            eventId: events.data.items[0].id
+            eventId: req.body.eventId,
         });
 
         res.send({ message: 'Event deleted successfully' });

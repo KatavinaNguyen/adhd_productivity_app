@@ -46,7 +46,7 @@ export default function HomeScreen() {
 
       // ✅ Send the ID Token to your backend
       // Local Address for Mac's: http://127.0.0.1:3000/google/calendar/schedule_event
-      const backendUrl = "http://10.0.2.2:3000/auth/google";
+      const backendUrl = "http://127.0.0.1:3000/auth/google";
       const responseFromBackend = await fetch(backendUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
