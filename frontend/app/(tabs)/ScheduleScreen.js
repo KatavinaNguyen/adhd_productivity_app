@@ -36,7 +36,7 @@ const ScheduleScreen = () => {
 
   // Time Setting (dates in UTC)
   const givenHalfTime = 14; //in 24hrs
-  const today = new Date(2025, 3, 27, 14, 0, 0);
+  const today = new Date();
   const [startTime, setStartTime] = useState(new Date(
     today.getFullYear(),
     today.getMonth(),
@@ -287,12 +287,11 @@ const ScheduleScreen = () => {
     const cardHeight = minCardHeight + newHeight + stretchHeight; 
 
     // Calculates position on the timeline 
-    let topPosition = 30;
+    const baseTop = 30;
+    let topPosition = baseTop;
     if (selectedTab === "Full Day") {
-      //base height is 30, inside is 120, then another 40 to get to the inside of another hr
-      const positionSkip = task.start.getHours() * 160;
-      topPosition += positionSkip;
-      //every hour is 160
+      const positionSkip = task.start.getHours() * 160 + task.start.getMinutes() * 2;
+      topPosition = baseTop + positionSkip;
     } else {
       console.log("half day");
     }
@@ -321,14 +320,6 @@ const ScheduleScreen = () => {
     );
   };
 
-
-  const calculateTopPosition = (task) => {
-    print(task);
-  };
-
-
-  
-  
   return (
     <View style={styles.container}>
       {/* Header Section */}
@@ -397,13 +388,15 @@ const ScheduleScreen = () => {
             <View style={styles.buttonRow}>
               <TouchableOpacity style={styles.timeButton} onPress={() => setStartPickerOpen(true)}>
                 <Text style={styles.buttonText}>{displayStart}</Text>
+              {/* START TIME */}
               <DatePicker
                 modal
                 open={startPickerOpen}
                 date={startTime}
                 mode="time"
                 //Once user clicks on endtime they CANNOT pick a time before the current one
-                minimumDate = {new Date()}
+                minimumDate = {today}
+                maximumDate = {new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 54, 0, 0)}
                 onConfirm={(selectedStartTime) => {
                   setStartPickerOpen(false);
                   setStartTime(selectedStartTime);
@@ -417,12 +410,14 @@ const ScheduleScreen = () => {
               <Text style={styles.toText}>to</Text>
               <TouchableOpacity style={styles.timeButton} onPress={() => setEndPickerOpen(true)}>
                 <Text style={styles.buttonText}>{displayEnd}</Text>
+              {/* END TIME */}
               <DatePicker
                 modal
                 open={endPickerOpen}
                 date={endTime}
                 mode="time"
                 minimumDate = {new Date(startTime.getTime() + 300000)}
+                maximumDate = {new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 0, 0)}
                 onConfirm={(selectedEndTime) => {
                   setEndPickerOpen(false);
                   setEndTime(selectedEndTime);
