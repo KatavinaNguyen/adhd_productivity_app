@@ -5,6 +5,10 @@ import DatePicker from 'react-native-date-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import  Swipeable  from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { Colors } from "react-native/Libraries/NewAppScreen";
+import { MMKV } from 'react-native-mmkv';
+
+const tasksStorage = new MMKV();
+//key-value pair as follows taskStorage.set('task_id', JSON.stringify(tasks_object));
 
 const ScheduleScreen = () => {
   // Navigation + Visuals
@@ -100,6 +104,17 @@ const ScheduleScreen = () => {
       //stores the calendar event's id inside of our task's googleId property
       newTask.id = await createGoogleCalendarEvent(newTask);
 
+      //store tasks in local storage after creating the event in google calendar
+      if (newTask.id === null) {
+        alert("Failed to create event in Google Calendar. Please try again.");
+        return;
+      }
+      // Store the new task in local storage
+      tasksStorage.set(newTask.id, JSON.stringify(newTask));
+      console.log("Task stored with id:", newTask.id);
+      let taskDet = tasksStorage.getString(newTask.id)
+      console.log(JSON.parse(taskDet));
+
       const newTasks = [...tasks, newTask].sort((a,b) => new Date(a.start) - new Date(b.start));   
       setTasks(newTasks);
       console.log(newTask);
@@ -132,7 +147,8 @@ const ScheduleScreen = () => {
     try {
       console.log("Sending request to create event with details:", eventDetails);
       // Local Address for Mac's: http://127.0.0.1:3000/google/calendar/schedule_event
-      const response = await fetch("http://10.0.2.2:3000/google/calendar/schedule_event", {
+      // const response = await fetch("http://10.0.2.2:3000/google/calendar/schedule_event", {
+      const response = await fetch("http://127.0.0.1:3000/google/calendar/schedule_event", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${accessToken}`,
@@ -240,7 +256,7 @@ const ScheduleScreen = () => {
 
     try {
         console.log("Sending request to update event with details:", eventDetails);
-        const response = await fetch("http://10.0.2.2:3000/google/calendar/update_event", {
+        const response = await fetch("http://127.0.0.1:3000/google/calendar/update_event", {
             method: "PUT",
             headers: {
                 "Authorization": `Bearer ${accessToken}`,
