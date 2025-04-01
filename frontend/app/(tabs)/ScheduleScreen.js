@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import  Swipeable  from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { Colors } from "react-native/Libraries/NewAppScreen";
 import { MMKV } from 'react-native-mmkv';
+import { verifyToken, createEvent, updateEvent, deleteEvent, listEvents } from "../../server/server";
 
 const tasksStorage = new MMKV();
 //key-value pair as follows taskStorage.set('task_id', JSON.stringify(tasks_object));
@@ -148,24 +149,20 @@ const ScheduleScreen = () => {
       console.log("Sending request to create event with details:", eventDetails);
       // Local Address for Mac's: http://127.0.0.1:3000/google/calendar/schedule_event
       // const response = await fetch("http://10.0.2.2:3000/google/calendar/schedule_event", {
-      const response = await fetch("http://127.0.0.1:3000/google/calendar/schedule_event", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(eventDetails),
-      });
+      const event = await createEvent(accessToken, eventDetails);
+      console.log("Event created:", event);
+      
       setTimeout(() => { }, 5000);
   
-      const result = await response.json();
-      if (response.ok) {
-        console.log("Event created!", result);
-        return result.event.id;
-      } else {
-        console.error("Error with the response:", result);
-        return null;
-      }
+      // const result = await response.json();
+      // if (response.ok) {
+      //   console.log("Event created!", result);
+      //   return result.event.id;
+      // } else {
+      //   console.error("Error with the response:", result);
+      //   return null;
+      // }
+      return event.id
     } catch (error) {
       console.error("Error creating event:", error);
       return null;

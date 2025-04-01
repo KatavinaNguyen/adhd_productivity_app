@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { verifyToken, createEvent, updateEvent, deleteEvent, listEvents } from "../../server/server";
 
 GoogleSignin.configure({
   webClientId: '1061066222675-jvt6ob80rvjuva0qknmhnh76gf5jve6i.apps.googleusercontent.com',
@@ -20,7 +21,7 @@ GoogleSignin.configure({
 
 export default function HomeScreen() {
   const [userInfo, setUserInfo] = useState<any>(null);
-  const router = useRouter(); // ✅ Ensure router is available
+  const router = useRouter();
 
   const handleGoogleSignIn = async () => {
     console.log("Google Sign-In button pressed");
@@ -30,10 +31,8 @@ export default function HomeScreen() {
       const user = await GoogleSignin.signIn();
       console.log("User Info:", user);
 
-      setUserInfo(user); // ✅ Store user info in state
+      setUserInfo(user); 
 
-      // ✅ Fix: Extract ID Token directly
-      //const { idToken } = user;
       const { accessToken, idToken } = await GoogleSignin.getTokens();
       if (!idToken) {
         throw new Error("ID Token is missing from Google Sign-In response");
@@ -44,21 +43,18 @@ export default function HomeScreen() {
 
       console.log("ID Token:", idToken);
 
-      // ✅ Send the ID Token to your backend
-      // Local Address for Mac's: http://127.0.0.1:3000/google/calendar/schedule_event
-      const backendUrl = "http://127.0.0.1:3000/auth/google";
-      const responseFromBackend = await fetch(backendUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: idToken }),
-      });
+      // const backendUrl = "http://127.0.0.1:3000/auth/google";
+      // const responseFromBackend = await fetch(backendUrl, {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({ token: idToken }),
+      // });
 
-      const result = await responseFromBackend.json();
-      console.log("Response from backend:", result);
+      // const result = await responseFromBackend.json();
+      // console.log("Response from backend:", result);
 
       await AsyncStorage.setItem('accessToken', accessToken);
       
-      // ✅ Navigate after successful login
       router.push("/ScheduleScreen");
 
     } catch (error) {
