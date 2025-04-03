@@ -40,8 +40,20 @@ async function createEvent(accessToken, eventDetails) {
             }
         );
 
+        console.log("Full API Response:", response);
+
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            try {
+                const errorBody = await response.json(); // Attempt to parse as JSON
+                console.error("API Error Body (JSON):", errorBody);
+                throw new Error(`HTTP error! status: ${response.status}, Error: ${JSON.stringify(errorBody)}`);
+            } catch (jsonError) {
+                // If parsing as JSON fails, try parsing as plain text
+                const errorText = await response.text();
+                console.error("API Error Body (Text):", errorText);
+                throw new Error(`HTTP error! status: ${response.status}, Error: ${errorText}`);
+            }
+
         }
 
         const data = await response.json();
@@ -102,10 +114,12 @@ async function deleteEvent(accessToken, eventId) {
 /**
  * Lists events from Google Calendar.
  */
-async function listEvents(accessToken, query = '', maxResults = 10) {
+async function listEvents(accessToken, maxResults = 10) {
     try {
         const response = await fetch(
-            `https://www.googleapis.com/calendar/v3/calendars/primary/events?q=${query}&maxResults=${maxResults}&singleEvents=true&orderBy=startTime`,
+            // `https://www.googleapis.com/calendar/v3/calendars/primary/events?q=tinyTasksTitle='TinyTasks'&maxResults=${maxResults}&singleEvents=true&orderBy=startTime`,
+            `https://www.googleapis.com/calendar/v3/calendars/primary/events?privateExtendedProperty=tinyTasksTitle%3DTinyTasks&maxResults=${maxResults}&singleEvents=true&orderBy=startTime`,
+            // `https://www.googleapis.com/calendar/v3/calendars/primary/events?q=tinyTasksTitle='TinyTasks'&maxResults=${maxResults}&orderBy=startTime`,
             {
                 method: 'GET',
                 headers: { Authorization: `Bearer ${accessToken}` },
@@ -117,6 +131,7 @@ async function listEvents(accessToken, query = '', maxResults = 10) {
         }
 
         const data = await response.json();
+        console.log("Events Data:", data);
         return data.items;
     } catch (error) {
         console.error('Error retrieving events:', error);

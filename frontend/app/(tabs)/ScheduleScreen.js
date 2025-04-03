@@ -73,6 +73,51 @@ const ScheduleScreen = () => {
     year: "numeric",
   }).toUpperCase();  
 
+  // Load tasks from local storage
+
+  // Load tasks from Google Calendar
+
+  const getTasksFromGoogleCalendar = async () => {
+    const accessToken = await AsyncStorage.getItem('accessToken');
+    try {
+      const events = await listEvents(accessToken);
+      // const tasks = events.map(event => ({
+      //   id: event.id,
+      //   name: event.summary,
+      //   description: event.description,
+      //   priority: event.colorId,
+      //   start: new Date(event.start.dateTime),
+      //   end: new Date(event.end.dateTime),
+      //   complete: false,
+      // }));
+      // setTasks(tasks);
+      // console.log("Tasks loaded from Google Calendar:\n", events);
+      return events;
+    } catch (error) {
+      console.error("Error loading tasks from Google Calendar:", error);
+    }
+  };
+  // Call this function to load tasks when the component mounts
+  React.useEffect(() => {
+    const loadTasks = async () => {
+      try {
+        // const storedTasks = await AsyncStorage.getItem('tasks');
+        // if (storedTasks) {
+        //   const parsedTasks = JSON.parse(storedTasks);
+        //   setTasks(parsedTasks);
+        // } else {
+        //   console.log("No tasks found in local storage.");
+        // }
+
+        let events = await getTasksFromGoogleCalendar();
+        console.log("Tasks loaded from Google Calendar:", events);
+      } catch (error) {
+        console.error("Error loading tasks from local storage:", error);
+      }
+    };
+    loadTasks();
+  }, []);
+
   // Handles task creation
   const createTask = async () => {
     try {
@@ -144,6 +189,11 @@ const ScheduleScreen = () => {
         timeZone: 'UTC',
       },
       colorId: getColorID(task),
+      extendedProperties: {
+        private: {
+            tinyTasksTitle: 'TinyTasks'
+        }
+      }
     };       
     try {
       console.log("Sending request to create event with details:", eventDetails);
@@ -154,14 +204,6 @@ const ScheduleScreen = () => {
       
       setTimeout(() => { }, 5000);
   
-      // const result = await response.json();
-      // if (response.ok) {
-      //   console.log("Event created!", result);
-      //   return result.event.id;
-      // } else {
-      //   console.error("Error with the response:", result);
-      //   return null;
-      // }
       return event.id
     } catch (error) {
       console.error("Error creating event:", error);
@@ -262,24 +304,10 @@ const ScheduleScreen = () => {
     };
 
     try {
-        console.log("Sending request to update event with details:", eventDetails);
-        const response = await fetch("http://127.0.0.1:3000/google/calendar/update_event", {
-            method: "PUT",
-            headers: {
-                "Authorization": `Bearer ${accessToken}`,
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ eventId: task.id , eventDetails }),
-        });
-
-        const result = await response.json();
-        if (response.ok) {
-            console.log("Event updated!", result);
-        } else {
-            console.error("Error with the response:", result);
-        }
+        await updateEvent(accessToken, task.id, eventDetails);
+        console.log("Event updated:", task.id);
     } catch (error) {
-        console.error("Error updating event:", error);
+        console.log("Error updating event:", error);
     }
   };
 
@@ -326,15 +354,9 @@ const ScheduleScreen = () => {
       const accessToken = await AsyncStorage.getItem('accessToken');
       // Remove the task from Google Calendar if it has an id
       try {
-        const response = await fetch("http://127.0.0.1:3000/google/calendar/delete_event", {
-          method: "DELETE",
-          headers: {
-            "Authorization": `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ eventId: taskId }),
-        });
+        await deleteEvent(accessToken, taskId);
         console.log("task deleted.. task deleted: ", taskId);
+        
         const newList = tasks.filter((item) => item.id !== taskId);
         setTasks(newList);
         setSelectedTask(null);
