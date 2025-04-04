@@ -91,7 +91,7 @@ const ScheduleScreen = () => {
       //   complete: false,
       // }));
       // setTasks(tasks);
-      console.log("Tasks loaded from Google Calendar:\n", events);
+      //console.log("Tasks loaded from Google Calendar:\n", events);
       return events;
     } catch (error) {
       console.error("Error loading tasks from Google Calendar:", error);
@@ -110,6 +110,32 @@ const ScheduleScreen = () => {
         // }
 
         let events = await getTasksFromGoogleCalendar();
+        for (let i = 0; i < events.length; i++) {
+          const currentEvent = events[i];
+
+          const currentStart = currentEvent.start.dateTime;
+          const newStartTime = new Date(currentStart).toString();
+
+          const currentEnd = currentEvent.end.dateTime;
+          const newEndTime = new Date(currentEnd).toString();
+          
+          const newTask = {
+            id: currentEvent.id,
+            name: currentEvent.summary, 
+            description: currentEvent.description == undefined ? "" : currentEvent.description, 
+            priority: 2,
+            start: newStartTime, 
+            end: newEndTime, 
+            complete: false,
+          };
+
+          const taskExists = tasks.some((task ) => task.id === newTask.id);
+          if (!taskExists) {
+            const newTasks = [...tasks, newTask].sort((a, b) => new Date(a.start) - new Date(b.start));
+            setTasks(newTasks);
+            console.log(tasks);
+          }
+        }
         //console.log("Tasks loaded from Google Calendar:", events);
       } catch (error) {
         console.error("Error loading tasks from local storage:", error);
@@ -415,8 +441,10 @@ const ScheduleScreen = () => {
     
       const task = tasks.find(t => t.id === taskId);
       const taskIndex = tasks.findIndex(t => t.id === taskId);
+      task.start = new Date(task.start);
     
       const halfDayTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), givenHalfTime, 0, 0, 0);
+
       if (selectedTab === 'Half Day') {
         if (task.start >= halfDayTime) {
           const remainingTasks = tasks.filter(t => t.start >= halfDayTime);
