@@ -91,7 +91,7 @@ const ScheduleScreen = () => {
       //   complete: false,
       // }));
       // setTasks(tasks);
-      // console.log("Tasks loaded from Google Calendar:\n", events);
+      console.log("Tasks loaded from Google Calendar:\n", events);
       return events;
     } catch (error) {
       console.error("Error loading tasks from Google Calendar:", error);
@@ -110,7 +110,7 @@ const ScheduleScreen = () => {
         // }
 
         let events = await getTasksFromGoogleCalendar();
-        console.log("Tasks loaded from Google Calendar:", events);
+        //console.log("Tasks loaded from Google Calendar:", events);
       } catch (error) {
         console.error("Error loading tasks from local storage:", error);
       }

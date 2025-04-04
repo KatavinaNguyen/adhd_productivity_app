@@ -116,9 +116,21 @@ async function deleteEvent(accessToken, eventId) {
  */
 async function listEvents(accessToken, maxResults = 10) {
     try {
+        const date = new Date();
+        const today = date.toISOString().split('T')[0];
+
+        let nextDate = new Date();
+        nextDate.setDate(nextDate.getDate() + 1);
+        const nextDay = nextDate.toISOString().split('T')[0];
+
+        //note: fetch url is hardcoded to convert from EST->UTC
+            //today 12:00AM EST -> today 04:00AM UTC
+            //today 11:59PM EST -> tomorrow 03:59AM UTC
+
         const response = await fetch(
             // `https://www.googleapis.com/calendar/v3/calendars/primary/events?q=tinyTasksTitle='TinyTasks'&maxResults=${maxResults}&singleEvents=true&orderBy=startTime`,
-            `https://www.googleapis.com/calendar/v3/calendars/primary/events?privateExtendedProperty=tinyTasksTitle%3DTinyTasks&maxResults=${maxResults}&singleEvents=true&orderBy=startTime`,
+            `https://www.googleapis.com/calendar/v3/calendars/primary/events?maxResults=${maxResults}&singleEvents=true&orderBy=startTime&timeMin=${today}T04:00:00Z&timeMax=${nextDay}T03:59:00Z`,
+            //https://www.googleapis.com/calendar/v3/calendars/primary/events?maxResults=${maxResults}&singleEvents=true&orderBy=startTime
             // `https://www.googleapis.com/calendar/v3/calendars/primary/events?q=tinyTasksTitle='TinyTasks'&maxResults=${maxResults}&orderBy=startTime`,
             {
                 method: 'GET',
@@ -131,8 +143,26 @@ async function listEvents(accessToken, maxResults = 10) {
         }
 
         const data = await response.json();
-        console.log("Events Data:", data);
-        return data.items;
+        let validEvents = [];
+        for (let i = 0; i < data.items.length; i++) {
+            //console.log(data.items[i].summary);
+            if (data.items[i].start.dateTime) {
+                validEvents.push(data.items[i]);
+            }
+        }
+
+        /*const filteredEvents = data.items.filter(event => {
+            if (event.start.dateTime) {
+                const eventStartTime = new Date(event.start.dateTime);
+                // Only include events that start today or in the future
+                return eventStartTime >= date;
+            }
+            return false; 
+        });*/
+
+        //console.log("Filtered Events (Today or Future Events):", filteredEvents);
+
+        return validEvents;
     } catch (error) {
         console.error('Error retrieving events:', error);
         throw new Error('Failed to retrieve events');
