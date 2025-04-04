@@ -123,20 +123,19 @@ const ScheduleScreen = () => {
             id: currentEvent.id,
             name: currentEvent.summary, 
             description: currentEvent.description == undefined ? "" : currentEvent.description, 
-            priority: 2,
+            priority: currentEvent.colorId, //testing needed
             start: newStartTime, 
             end: newEndTime, 
-            complete: false,
+            complete: false, //testing needed
           };
 
           const taskExists = tasks.some((task ) => task.id === newTask.id);
           if (!taskExists) {
             const newTasks = [...tasks, newTask].sort((a, b) => new Date(a.start) - new Date(b.start));
-            setTasks(newTasks);
-            console.log(tasks);
+            setTasks(newTasks );
           }
         }
-        //console.log("Tasks loaded from Google Calendar:", events);
+        console.log("Tasks loaded from Google Calendar:", events);
       } catch (error) {
         console.error("Error loading tasks from local storage:", error);
       }
