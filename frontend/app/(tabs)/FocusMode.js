@@ -62,6 +62,7 @@ const FocusMode = () => {
         </Animated.View>
 
         <Text style={styles.taskText}>{task}</Text> {/* Display current task */}
+
       </View>
 
       {/* Buttons */}

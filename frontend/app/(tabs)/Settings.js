@@ -1,24 +1,58 @@
-import React from "react";
-import {
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import React, { useState } from "react";
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useRouter } from 'expo-router';
 
 const Settings = () => {
   const router = useRouter();
-  const tasks = [
-    "Data Structures HW",
-    "Grocery Shopping",
-    "Team Meeting",
-    "Walk the Dog",
-    "Volunteer Shift",
-    "Library Book Return",
-  ];
+
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  // Add new section
+
+  // Animated values for accordion expansion
+  const accountHeight = useState(new Animated.Value(0))[0];
+  const notificationsHeight = useState(new Animated.Value(0))[0];
+  const helpHeight = useState(new Animated.Value(0))[0];
+  // Add new section value
+
+  const toggleAccordion = (section: string) => {
+    let heightValue = 0;
+    let stateSetter = () => {};
+
+    switch (section) {
+      case "account":
+        heightValue = accountOpen ? 0 : 100; // Height when expanded
+        stateSetter = () => setAccountOpen((prev) => !prev);
+        Animated.timing(accountHeight, {
+          toValue: heightValue,
+          duration: 300,
+          useNativeDriver: false,
+        }).start();
+        break;
+      case "notifications":
+        heightValue = notificationsOpen ? 0 : 100;
+        stateSetter = () => setNotificationsOpen((prev) => !prev);
+        Animated.timing(notificationsHeight, {
+          toValue: heightValue,
+          duration: 300,
+          useNativeDriver: false,
+        }).start();
+        break;
+      case "help":
+        heightValue = helpOpen ? 0 : 100;
+        stateSetter = () => setHelpOpen((prev) => !prev);
+        Animated.timing(helpHeight, {
+          toValue: heightValue,
+          duration: 300,
+          useNativeDriver: false,
+        }).start();
+        break;
+       // Add copy for new section
+
+    }
+    stateSetter();
+  };
 
   return (
     <View style={styles.container}>
@@ -27,25 +61,48 @@ const Settings = () => {
         <Text style={styles.headerText}>Settings</Text>
       </View>
 
-      {/* Settings List */}
+      {/* Settings List - Accordion */}
       <View style={styles.section}>
-      <TouchableOpacity style={styles.listButton}>
-            <Text style={styles.listText}>Account</Text>
+        {/* Account Section */}
+        <TouchableOpacity style={styles.listButton} onPress={() => toggleAccordion("account")}>
+          <Text style={styles.listText}>Account</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.listButton}>
-            <Text style={styles.listText}>Notifications</Text>
+        <Animated.View style={{ height: accountHeight, overflow: "hidden" }}>
+          <View style={styles.accordionContent}>
+            <Text style={styles.accordionText}>Account Settings Content</Text>
+          </View>
+        </Animated.View>
+
+        {/* Notifications Section */}
+        <TouchableOpacity style={styles.listButton} onPress={() => toggleAccordion("notifications")}>
+          <Text style={styles.listText}>Manage Notifications</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.listButton}>
-            <Text style={styles.listText}>Other</Text>
+        <Animated.View style={{ height: notificationsHeight, overflow: "hidden" }}>
+          <View style={styles.accordionContent}>
+            <Text style={styles.accordionText}>Notifications Settings Content</Text>
+          </View>
+        </Animated.View>
+
+        {/* Help Section */}
+        <TouchableOpacity style={styles.listButton} onPress={() => toggleAccordion("help")}>
+          <Text style={styles.listText}>Help</Text>
         </TouchableOpacity>
+        <Animated.View style={{ height: helpHeight, overflow: "hidden" }}>
+          <View style={styles.accordionContent}>
+            <Text style={styles.accordionText}>Help Content</Text>
+          </View>
+        </Animated.View>
       </View>
 
       {/* Home Button */}
-        <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/ScheduleScreen")}>
-                <Text style={styles.actionButtonText}>Return to Dashboard</Text>
-            </TouchableOpacity>
-        </View>
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => router.push("/ScheduleScreen")}
+        >
+          <Text style={styles.actionButtonText}>Return to Dashboard</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -59,70 +116,76 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   header: {
-    backgroundColor: "#333",
+    backgroundColor: "#FF7F50",
     paddingVertical: 15,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 30,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   headerText: {
-    fontSize: 18,
+    fontSize: 24,
     color: "#FFF",
     fontWeight: "bold",
   },
   section: {
-    backgroundColor: "#F8F8F8",
+    backgroundColor: "#FFF",
     borderRadius: 12,
-    padding: 23,
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#FF7F50",
-    marginBottom: 12,
-  },
-  taskList: {
-    flexDirection: "column",
-    gap: 10,
+    padding: 20,
+    marginBottom: 30,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
   },
   listButton: {
-    backgroundColor: "#ECECEC",
-    paddingVertical: 25,
-    borderRadius: 8,
+    backgroundColor: "#333",
+    paddingVertical: 18,
+    borderRadius: 10,
     alignItems: "center",
-    marginVertical: 10,
+    marginBottom: 16,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   listText: {
     fontSize: 18,
+    color: "#FFF",
+    fontWeight: "500",
+  },
+  accordionContent: {
+    backgroundColor: "#FFE5B4",
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 10,
+    elevation: 2,
+  },
+  accordionText: {
+    fontSize: 16,
     color: "#333",
-  },
-  rewardsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 8,
-  },
-  rewardImage: {
-    width: 40,
-    height: 40,
   },
   buttonContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
   },
   actionButton: {
     backgroundColor: "#FF7F50",
     paddingVertical: 15,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    flex: 1,
+    paddingHorizontal: 25,
+    borderRadius: 10,
     alignItems: "center",
-    marginHorizontal: 5,
-    bottom: 0,
+    width: "80%",
+    marginBottom: 20,
+    elevation: 5,
   },
   actionButtonText: {
-    fontSize: 16,
+    fontSize: 18,
     color: "#FFF",
     fontWeight: "bold",
   },

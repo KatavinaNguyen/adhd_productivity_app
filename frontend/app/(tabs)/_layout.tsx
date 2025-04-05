@@ -19,16 +19,18 @@ export default function TabLayout() {
           headerShown: false,
           tabBarButton: HapticTab,
           tabBarBackground: TabBarBackground,
-          tabBarStyle: {
-            display: 'none', // Hide the bottom tab bar
-          },
-        }}
-      >
-        {/* Define your tab screens here */}
-      </Tabs>
-    </GestureHandlerRootView>
-  );
-}
+                     tabBarStyle: Platform.select({
+                       ios: {
+                         position: 'absolute',
+                       },
+                       default: {},
+                     }),
+                   }}
+                 >
+                 </Tabs>
+               </GestureHandlerRootView>
+             );
+           }
 
 /*
 ~ old ugly nav in case kat wants it back to be faster
@@ -45,4 +47,19 @@ export default function TabLayout() {
      </GestureHandlerRootView>
    );
  }
+
+
+
+
+           tabBarStyle: {
+             display: 'none', // Hide the bottom tab bar
+           },
+         }}
+       >
+         {}
+       </Tabs>
+     </GestureHandlerRootView>
+   );
+ }
+
  */
