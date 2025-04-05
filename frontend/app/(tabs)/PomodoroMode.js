@@ -1,17 +1,10 @@
-/*
-this is kat i still have issues with this interaction when you press start/reset
-where it'll switch the times for work/break.
-i have to compare how other pomodoro apps do it so i wanna come back to it later
-*/
-
 import { useRouter } from 'expo-router';
 import React, { useState, useEffect } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const PomodoroMode = () => {
-  const router = useRouter();
-  const pomodoroMin = 25; // Work duration (25 minutes)
-  const breakMin = 5; // Break duration (5 minutes)
+  const pomodoroMin = .25; // Work duration (25 minutes)
+  const breakMin = .05; // Break duration (5 minutes)
 
   const [isPomodoro, setIsPomodoro] = useState(true); // Work mode = true, Break mode = false
   const [timer, setTimer] = useState(pomodoroMin * 60); // Timer in seconds
@@ -24,12 +17,12 @@ const PomodoroMode = () => {
         setTimer((prev) => prev - 1);
       }, 1000);
     } else if (timer === 0) {
-      // Switch modes when timer reaches 0
-      setIsPomodoro((prevMode) => !prevMode);
-      setTimer(isPomodoro ? breakMin * 60 : pomodoroMin * 60);
+      // When timer hits 0, switch modes automatically
+      setIsPomodoro((prevMode) => !prevMode); // Toggle mode
+      setTimer(isPomodoro ? breakMin * 60 : pomodoroMin * 60); // Reset timer to the appropriate mode
     }
     return () => clearInterval(interval);
-  }, [isRunning, timer]);
+  }, [isRunning, timer, isPomodoro]);
 
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
@@ -44,6 +37,11 @@ const PomodoroMode = () => {
   const resetTimer = () => {
     setIsRunning(false);
     setTimer(isPomodoro ? pomodoroMin * 60 : breakMin * 60);
+  };
+
+  const switchMode = (mode) => {
+    setIsPomodoro(mode);
+    setTimer(mode ? pomodoroMin * 60 : breakMin * 60);
   };
 
   return (
@@ -62,42 +60,26 @@ const PomodoroMode = () => {
       <View style={styles.timerContainer}>
         <Text style={styles.timerText}>{formatTime(timer)}</Text>
 
-        {/* Mode Switch */}
+        {/* Mode Switch (only visible when timer is stopped) */}
         <View style={styles.modeSwitch}>
           <TouchableOpacity
-            style={[
-              styles.modeButton,
-              isPomodoro ? styles.activeMode : styles.inactiveMode,
-            ]}
-            onPress={() => {
-              setIsPomodoro(true);
-              resetTimer();
-            }}
+            style={[styles.modeButton, isPomodoro ? styles.activeMode : styles.inactiveMode]}
+            onPress={() => switchMode(true)} // Switch to Pomodoro
+            disabled={isRunning} // Disable if timer is running
           >
             <Text
-              style={[
-                styles.modeText,
-                isPomodoro ? styles.activeModeText : styles.inactiveModeText,
-              ]}
+              style={[styles.modeText, isPomodoro ? styles.activeModeText : styles.inactiveModeText]}
             >
               Pomodoro
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[
-              styles.modeButton,
-              !isPomodoro ? styles.activeMode : styles.inactiveMode,
-            ]}
-            onPress={() => {
-              setIsPomodoro(false);
-              resetTimer();
-            }}
+            style={[styles.modeButton, !isPomodoro ? styles.activeMode : styles.inactiveMode]}
+            onPress={() => switchMode(false)} // Switch to Break
+            disabled={isRunning} // Disable if timer is running
           >
             <Text
-              style={[
-                styles.modeText,
-                !isPomodoro ? styles.activeModeText : styles.inactiveModeText,
-              ]}
+              style={[styles.modeText, !isPomodoro ? styles.activeModeText : styles.inactiveModeText]}
             >
               Break
             </Text>
@@ -122,6 +104,7 @@ const PomodoroMode = () => {
     </View>
   );
 };
+
 
 // Styles
 const styles = StyleSheet.create({
