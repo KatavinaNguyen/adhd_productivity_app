@@ -101,7 +101,7 @@ const ScheduleScreen = () => {
   // Call this function to load tasks when the component mounts
   React.useEffect(() => {
     const loadTasks = async () => {
-      try {
+      try { 
         // const storedTasks = await AsyncStorage.getItem('tasks');
         // if (storedTasks) {
         //   const parsedTasks = JSON.parse(storedTasks);
@@ -111,6 +111,7 @@ const ScheduleScreen = () => {
         // }
 
         let events = await getTasksFromGoogleCalendar();
+        let newTasks = [...tasks];
         for (let i = 0; i < events.length; i++) {
           const currentEvent = events[i];
 
@@ -130,12 +131,13 @@ const ScheduleScreen = () => {
             complete: false, //testing needed
           };
 
-          const taskExists = tasks.some((task ) => task.id === newTask.id);
+          const taskExists = newTasks.some((task) => task.id === newTask.id);
           if (!taskExists) {
-            const newTasks = [...tasks, newTask].sort((a, b) => new Date(a.start) - new Date(b.start));
-            setTasks(newTasks);
+            newTasks.push(newTask);
           }
         }
+        newTasks = newTasks.sort((a, b) => new Date(a.start) - new Date(b.start));
+        setTasks(newTasks);
       } catch (error) {
         console.error("Error loading tasks from local storage:", error);
       }
@@ -303,7 +305,6 @@ const ScheduleScreen = () => {
       updatedTasks.sort((a,b) => new Date(a.start) - new Date(b.start));
 
       setTasks(updatedTasks);
-      resetTaskForm();
     } catch (error) {
       console.error("Error occurred: ", error);
     }
@@ -355,6 +356,8 @@ const ScheduleScreen = () => {
   const Card = ({ children, taskId }) => {
     const task = tasks.find(t => t.id === taskId);
     const completionText = task.complete ? "Undo" : "Complete";
+    const [cardHeight, setCardHeight] = useState(0);
+
     const renderLeftActions = () => (
       <View style={styles.leftAction}>
         <Text style={styles.completeText}>{completionText}</Text>
@@ -372,7 +375,6 @@ const ScheduleScreen = () => {
       );
       setTasks(updatedTasks);
       setSelectedTask(null);
-
     }
     //PERMANENTLY DELETES TASK
     const deleteTask = async () => {
@@ -403,7 +405,10 @@ const ScheduleScreen = () => {
       stretchDifference--;
     }
     const stretchHeight = stretchDifference > 0 ? stretchDifference * 40 : 0;
-    const cardHeight = minCardHeight + newHeight + stretchHeight;
+    const height = minCardHeight + newHeight + stretchHeight;
+    useEffect(() => {
+      setCardHeight(height);
+    }, [cardHeight]);
 
     const topPosition = calculateTopPosition(task.id);
     
@@ -415,9 +420,9 @@ const ScheduleScreen = () => {
             onSwipeableOpen={(direction) => (direction == "left") ? completeTask() : deleteTask()}
           >
             <TouchableOpacity 
-              style={[styles.taskCard, { height: cardHeight }]}
+              style={[styles.taskCard, { height: cardHeight, paddingTop: cardHeight / 2.7,}]}
               onPress={() => { viewTaskDetails(task); }}
-              activeOpacity={0.7}
+              activeOpacity={1.0}
             >
               {children}
               <Text 
@@ -427,7 +432,6 @@ const ScheduleScreen = () => {
                   }]}
               >!
               </Text>
-
             </TouchableOpacity>
           </Swipeable>
         </View>
@@ -438,16 +442,14 @@ const ScheduleScreen = () => {
     const calculateTopPosition = (taskId) => {
       const baseTop = 30; // Underneath every time (ex. 12:00AM) we need to space out at least 30px
       let topPosition = 0;
-    
       const task = tasks.find(t => t.id === taskId);
-      const taskIndex = tasks.findIndex(t => t.id === taskId);
+      let taskIndex = tasks.findIndex(t => t.id === taskId);
       task.start = new Date(task.start); // Current task's start time in datetime
-
-      if (selectedTab === 'Half Day') {
+      
+      if (selectedTab === 'Half Day' && task.start >= halfDayTime) {
         if (task.start >= halfDayTime) {
           const remainingTasks = tasks.filter(t => t.start >= halfDayTime);
           const newTaskIndex = remainingTasks.findIndex(t => t.id === taskId);
-          
           const subtractPosition = givenHalfTime * 160;
           
           if (newTaskIndex > 0) { // NOT the first task in our new list
@@ -455,58 +457,59 @@ const ScheduleScreen = () => {
             const prevEnd = new Date(prevTask.end);
     
             const gapinMin = (task.start - prevEnd) / (1000*60);
-            const gapStretchDifference = task.start.getHours() - prevEnd.getHours();
-    
+            let gapinHrs = task.start.getHours() - prevEnd.getHours();
+            if (gapinMin % 60 != 0) {
+              gapinHrs = gapinHrs - 1;
+            }
+
+            // If previous + current task end/start at the same point    
             if (task.start.getHours() === prevEnd.getHours()) {
+              // If the tasks are the same hour like XX:00 (aka the border) we need to add 40px
               if (prevEnd.getMinutes() === 0 || task.start.getMinutes() === 0) {
                 topPosition = gapinMin * 2 + 40;
-              } else {
+              }/* else {
                 topPosition = gapinMin * 2;
-              }
+              }*/
             } else { 
-              topPosition = (gapinMin * 2) + gapStretchDifference * 40;
+              topPosition = (gapinMin * 2) + gapinHrs * 40;
               if (prevEnd.getMinutes() === 0 || task.start.getMinutes() === 0) {
                 topPosition += 40;
               }
             }
-            if (gapinMin <= 5) {
-              topPosition += gapinMin;
-            }
           } else {
             topPosition = baseTop + (task.start.getHours() * 160 + task.start.getMinutes() * 2) - subtractPosition;
           }
-        } else {
-          topPosition = baseTop + (task.start.getHours() * 160 + task.start.getMinutes() * 2);
         }
       } else {
-        if (taskIndex > 0) { // NOT the first task in our list
+        // When the current task is NOT the first of the day
+        if (taskIndex > 0) { 
           const prevTask = tasks[taskIndex - 1];
           const prevEnd = new Date(prevTask.end);
-    
+
           const gapinMin = (task.start - prevEnd) / (1000*60);
-          const gapStretchDifference = task.start.getHours() - prevEnd.getHours();
+          let gapinHrs = task.start.getHours() - prevEnd.getHours();
+          // Difference in hours is re-calculated if there's leftover minutes between the hours
+          if (gapinMin % 60 != 0) {
+            gapinHrs = gapinHrs - 1;
+          }
     
+          // If previous + current task end/start at the same point
           if (task.start.getHours() === prevEnd.getHours()) {
+            // If the tasks are the same hour like XX:00 (aka the border) we need to add 40px
             if (prevEnd.getMinutes() === 0 || task.start.getMinutes() === 0) {
               topPosition = gapinMin * 2 + 40;
-            } else {
-              topPosition = gapinMin * 2;
-            }
+            // If the tasks have the same hour BUT are not at the border
+            } 
           } else { 
-            topPosition = (gapinMin * 2) + gapStretchDifference * 40;
+            topPosition = (gapinMin * 2) + gapinHrs * 40;
             if (prevEnd.getMinutes() === 0 || task.start.getMinutes() === 0) {
               topPosition += 40;
             }
           }
-          if (gapinMin <= 5) {
-            topPosition += gapinMin;
-          }
         } else {
           topPosition = baseTop + (task.start.getHours() * 160 + task.start.getMinutes() * 2);
-          //wlsd task topposition is 90, 620, 2600
-          //without top task its 
         }
-      }
+      }      
       return topPosition;
     };
     
@@ -840,9 +843,8 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
     width: '100%',
   },
-  //lesgo
   timeSlot: {
-    borderBottomWidth: 1,
+    borderBottomWidth: 2,
     borderBottomColor: "#FF7F50",
     height: 150,
     marginTop: 10,
@@ -874,6 +876,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
+    zIndex: 6,
   },
   modalContainer: {
     width: "80%",
@@ -882,6 +885,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     elevation: 5,
+    zIndex: 6,
   },
   modalTitle: {
     fontSize: 18,
@@ -968,9 +972,11 @@ const styles = StyleSheet.create({
   taskCard: {
     backgroundColor: '#f0eded',
     margin: 3,
-    paddingLeft: 15, 
-    paddingTop: 15, 
+    paddingLeft: 5,
+    //paddingTop: 0, 
     position: 'relative',
+    borderColor: '#d9d1d1',
+    borderWidth: 1,
   },
   taskCardContainer: {
     position: "relative", 
