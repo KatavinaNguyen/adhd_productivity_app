@@ -113,23 +113,22 @@ async function deleteEvent(accessToken, eventId) {
 
 /**
  * Lists events from Google Calendar.
- */
+ --
+    Note: Google Calendar wants the UTC timezone instead, so we have to convert our timezone into UTC
+    EST: today 12:00AM EST -> today 04:00AM UTC and today 11:59PM EST -> tomorrow 03:59AM UTC
+*/
 async function listEvents(accessToken, maxResults = 10) {
     try {
-        const date = new Date();
-        const today = date.toISOString().split('T')[0];
+        const date = new Date(); // Current time in UTC
+        const start = new Date(date.setHours(0,0,0,0)); // 4AM today UTC
+        const end = new Date(date.setHours(23,59,59,999)); // 3:59AM tomorrow UTC
 
-        let nextDate = new Date();
-        nextDate.setDate(nextDate.getDate() + 1);
-        const nextDay = nextDate.toISOString().split('T')[0];
-
-        //note: fetch url is hardcoded to convert from EST->UTC
-            //today 12:00AM EST -> today 04:00AM UTC
-            //today 11:59PM EST -> tomorrow 03:59AM UTC
+        const timeMin = start.toISOString();
+        const timeMax = end.toISOString(); 
 
         const response = await fetch(
             // `https://www.googleapis.com/calendar/v3/calendars/primary/events?q=tinyTasksTitle='TinyTasks'&maxResults=${maxResults}&singleEvents=true&orderBy=startTime`,
-            `https://www.googleapis.com/calendar/v3/calendars/primary/events?maxResults=${maxResults}&singleEvents=true&orderBy=startTime&timeMin=${today}T04:00:00Z&timeMax=${nextDay}T03:59:00Z`,
+            `https://www.googleapis.com/calendar/v3/calendars/primary/events?maxResults=${maxResults}&singleEvents=true&orderBy=startTime&timeMin=${timeMin}&timeMax=${timeMax}`,
             //https://www.googleapis.com/calendar/v3/calendars/primary/events?maxResults=${maxResults}&singleEvents=true&orderBy=startTime
             // `https://www.googleapis.com/calendar/v3/calendars/primary/events?q=tinyTasksTitle='TinyTasks'&maxResults=${maxResults}&orderBy=startTime`,
             {
@@ -142,29 +141,17 @@ async function listEvents(accessToken, maxResults = 10) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const data = await response.json();
+        const data = await response.json(); 
         let validEvents = [];
         for (let i = 0; i < data.items.length; i++) {
-            //console.log(data.items[i].summary);
             if (data.items[i].start.dateTime) {
                 validEvents.push(data.items[i]);
             }
         }
 
-        /*const filteredEvents = data.items.filter(event => {
-            if (event.start.dateTime) {
-                const eventStartTime = new Date(event.start.dateTime);
-                // Only include events that start today or in the future
-                return eventStartTime >= date;
-            }
-            return false; 
-        });*/
-
-        //console.log("Filtered Events (Today or Future Events):", filteredEvents);
-
         return validEvents;
     } catch (error) {
-        console.error('Error retrieving events:', error);
+        console.error('Error retrieving events: ', error);
         throw new Error('Failed to retrieve events');
     }
 }

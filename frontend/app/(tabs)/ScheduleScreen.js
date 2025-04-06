@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert, Modal, Pressable, TextInput, Touchable } from "react-native";
 import { useRouter } from "expo-router";
 import DatePicker from 'react-native-date-picker';
@@ -41,8 +41,9 @@ const ScheduleScreen = () => {
   ];
 
   // Time Setting (dates in UTC)
-  const givenHalfTime = 14; //in 24hrs
   const today = new Date();
+  const givenHalfTime = 14; //in 24hrs
+  const halfDayTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), givenHalfTime, 0, 0, 0);
   const [startTime, setStartTime] = useState(new Date(
     today.getFullYear(),
     today.getMonth(),
@@ -71,7 +72,7 @@ const ScheduleScreen = () => {
     month: "short",
     day: "2-digit",
     year: "numeric",
-  }).toUpperCase();  
+  }).toUpperCase();   
 
   // Load tasks from local storage
 
@@ -132,17 +133,16 @@ const ScheduleScreen = () => {
           const taskExists = tasks.some((task ) => task.id === newTask.id);
           if (!taskExists) {
             const newTasks = [...tasks, newTask].sort((a, b) => new Date(a.start) - new Date(b.start));
-            setTasks(newTasks );
+            setTasks(newTasks);
           }
         }
-        console.log("Tasks loaded from Google Calendar:", events);
       } catch (error) {
         console.error("Error loading tasks from local storage:", error);
       }
     };
     loadTasks();
   }, []);
-
+  
   // Handles task creation
   const createTask = async () => {
     try {
@@ -352,7 +352,7 @@ const ScheduleScreen = () => {
     setDetailsModalVisible(true);
   };
 
-  const Card = ({ children, taskId, onPress }) => {
+  const Card = ({ children, taskId }) => {
     const task = tasks.find(t => t.id === taskId);
     const completionText = task.complete ? "Undo" : "Complete";
     const renderLeftActions = () => (
@@ -434,15 +434,14 @@ const ScheduleScreen = () => {
       );
     };
 
+    // Calculates the position of the top of the card so it aligns properly with the timeline
     const calculateTopPosition = (taskId) => {
-      const baseTop = 30;
+      const baseTop = 30; // Underneath every time (ex. 12:00AM) we need to space out at least 30px
       let topPosition = 0;
     
       const task = tasks.find(t => t.id === taskId);
       const taskIndex = tasks.findIndex(t => t.id === taskId);
-      task.start = new Date(task.start);
-    
-      const halfDayTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), givenHalfTime, 0, 0, 0);
+      task.start = new Date(task.start); // Current task's start time in datetime
 
       if (selectedTab === 'Half Day') {
         if (task.start >= halfDayTime) {
@@ -504,13 +503,13 @@ const ScheduleScreen = () => {
           }
         } else {
           topPosition = baseTop + (task.start.getHours() * 160 + task.start.getMinutes() * 2);
+          //wlsd task topposition is 90, 620, 2600
+          //without top task its 
         }
       }
-    
       return topPosition;
     };
     
-
   return (
     <View style={styles.container}>
       {/* Header Section */}
@@ -703,8 +702,6 @@ const ScheduleScreen = () => {
       {/* Current Date */}
       <Text style={styles.dateText}>{formattedDate}</Text>
 
-
-
       <View style={styles.container}>
         {/* Container ScrollView */}
         <ScrollView contentContainerStyle={styles.scrollContainer} scrollEventThrottle={16} style={{height: '100%'}}>
@@ -731,8 +728,9 @@ const ScheduleScreen = () => {
                     if (selectedTab === "Half Day") {
                       const taskStart = task.start.getHours();
                       return taskStart >= givenHalfTime;
+                    } else {
+                      return true;
                     }
-                    return true;
                   }) 
                   .map((task) => (
                     <Card key={task.id} taskId={task.id}>
