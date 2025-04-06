@@ -120,17 +120,18 @@ const ScheduleScreen = () => {
 
           const currentEnd = currentEvent.end.dateTime;
           const newEndTime = new Date(currentEnd).toString();
+
+          const currentPriority = currentEvent.colorId;
           
           const newTask = {
             id: currentEvent.id,
             name: currentEvent.summary, 
             description: currentEvent.description == undefined ? "" : currentEvent.description, 
-            priority: currentEvent.colorId, //testing needed
+            priority: currentPriority,
             start: newStartTime, 
             end: newEndTime, 
             complete: false, //testing needed
           };
-
           const taskExists = newTasks.some((task) => task.id === newTask.id);
           if (!taskExists) {
             newTasks.push(newTask);
@@ -409,9 +410,7 @@ const ScheduleScreen = () => {
     useEffect(() => {
       setCardHeight(height);
     }, [cardHeight]);
-
-    const topPosition = calculateTopPosition(task.id);
-    
+    const topPosition = calculateTopPosition(task.id);    
       return (
         <View style={{ position: 'relative', flex: 1, width: '100%', height: cardHeight, marginTop: topPosition }}>
           <Swipeable
@@ -427,7 +426,7 @@ const ScheduleScreen = () => {
               {children}
               <Text 
                 style={[styles.priorityMark, 
-                  { color: task.priority === 4 ? 'red' : (task.priority === 5 ? 'yellow' : 'green'),
+                  { color: task.priority == 4 ? 'red' : (task.priority == 5 ? 'yellow' : 'green'),
                     opacity: task.complete ? 0.2 : 1
                   }]}
               >!
