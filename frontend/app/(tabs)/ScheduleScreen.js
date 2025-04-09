@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert, Modal, Pressable, TextInput, Touchable } from "react-native";
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert, Modal, Pressable, TextInput, Touchable } from "react-native";
 import { useRouter } from "expo-router";
 import DatePicker from 'react-native-date-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -370,7 +370,7 @@ const ScheduleScreen = () => {
       </View>
     );
     const renderRightActions = () => (
-      <View style={styles.rightAction}>
+      <View style={[styles.rightAction]}>
         <Text style={styles.deleteText}>Delete</Text>
       </View>
     );
@@ -417,7 +417,7 @@ const ScheduleScreen = () => {
     }, [cardHeight]);
     const topPosition = calculateTopPosition(task.id);    
       return (
-        <View style={{ position: 'relative', flex: 1, width: '100%', height: cardHeight, marginTop: topPosition }}>
+        <View style={{ position: 'relative', flex: 1, width: '100%', height: cardHeight, marginTop: topPosition}}>
           <Swipeable
             renderLeftActions={renderLeftActions}
             renderRightActions={renderRightActions}
@@ -570,7 +570,10 @@ const ScheduleScreen = () => {
                 onPress={() => { deleteAlert(); }}
                 activeOpacity={1.0}
               >
-                <Text>🗑️</Text>
+                <Image 
+                  source={require('../../assets/images/trash.png')}
+                  style={{width: 20, height: 20}}
+                />
               </TouchableOpacity>
               <Text style={styles.detailText}>{new Date(task.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}-
                {new Date(task.end).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</Text>
@@ -584,25 +587,37 @@ const ScheduleScreen = () => {
       {/* Header Section */}
       <View style={styles.header}>
         <View style={styles.headerButtons}>
-          <TouchableOpacity style={styles.headerIcon} onPress={() => router.push("/index")}>
-            <Text style={styles.iconText}>←</Text>
-          </TouchableOpacity>
           <TouchableOpacity style={styles.headerIcon} onPress={() => setOverflowModalVisible(true)}>
-            <Text style={styles.iconText}>V</Text>
+            <Image 
+              source={require('../../assets/images/arrow.png')}
+              style={{width: 20, height: 20}}
+            />
           </TouchableOpacity>
         </View>
         <View style={styles.headerButtons}>
           <TouchableOpacity onPress={() => router.push("/FocusMode")}>
-            <Text style={styles.iconText}>⏱️</Text>
+            <Image 
+              source={require('../../assets/images/clock.png')}
+              style={{width: 27, height: 27}}
+            />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push("/StampBook")}>
-            <Text style={styles.iconText}>📓</Text>
+            <Image 
+              source={require('../../assets/images/book.png')}
+              style={{width: 30, height: 30}}
+            />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => [setModalVisible(true), setSelectedTask(null)]}>
-            <Text style={styles.iconText}>+</Text>
+            <Image 
+              source={require('../../assets/images/add.png')}
+              style={{width: 29, height: 29}}
+            />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push("/Settings")}>
-            <Text style={styles.iconText}>⚙️</Text>
+            <Image 
+              source={require('../../assets/images/gear.png')}
+              style={{width: 30, height: 30}}
+            />
           </TouchableOpacity>
         </View>
       </View>
