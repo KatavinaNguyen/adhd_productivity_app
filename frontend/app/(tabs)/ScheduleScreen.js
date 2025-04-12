@@ -47,6 +47,7 @@ const ScheduleScreen = () => {
 
   // Time Setting (dates in UTC)
   const today = new Date();
+  today.setHours(12,0,0,0);
   const givenHalfTime = 14; //in 24hrs
   const halfDayTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), givenHalfTime, 0, 0, 0);
   const [startTime, setStartTime] = useState(new Date(
@@ -117,16 +118,18 @@ const ScheduleScreen = () => {
 
         let events = await getTasksFromGoogleCalendar();
         let newTasks = [...tasks];
+        let conflictTasks = [];
         for (let i = 0; i < events.length; i++) {
           const currentEvent = events[i];
 
           const currentStart = currentEvent.start.dateTime;
-          const newStartTime = new Date(currentStart).toString();
+          const newStartTime = new Date(currentStart); //,toString
 
           const currentEnd = currentEvent.end.dateTime;
-          const newEndTime = new Date(currentEnd).toString();
+          const newEndTime = new Date(currentEnd); //.toString
 
           const currentPriority = currentEvent.colorId;
+          //console.log(newStartTime, " + ", newEndTime);
           
           const newTask = {
             id: currentEvent.id,
@@ -137,13 +140,32 @@ const ScheduleScreen = () => {
             end: newEndTime, 
             complete: false, //testing needed
           };
+
+          const checkOverlap = newTasks.some((task) => {
+            const taskStart = new Date(task.start);
+            const taskEnd = new Date(task.end);
+            return (
+              (newStartTime <= taskStart && newEndTime >= taskEnd) ||
+              (newStartTime >= taskStart && newStartTime < taskEnd) ||
+              (newEndTime > taskStart && newEndTime <= taskEnd)
+            );
+          });
+
           const taskExists = newTasks.some((task) => task.id === newTask.id);
+          //Prevents tasks from being added every single refresh
           if (!taskExists) {
-            newTasks.push(newTask);
+            if (checkOverlap) {
+              console.log("this task is an overflow: ", newTask.name);
+              conflictTasks.push(newTask);
+            } else { 
+              console.log("Task added successfully: ", newTask.name);
+              newTasks.push(newTask);
+            }
           }
         }
         newTasks = newTasks.sort((a, b) => new Date(a.start) - new Date(b.start));
         setTasks(newTasks);
+        setOverFlowTasks(conflictTasks);
       } catch (error) {
         console.error("Error loading tasks from local storage:", error);
       }
@@ -166,7 +188,6 @@ const ScheduleScreen = () => {
         alert("Overlap Error -- Please select another time slot");
         return;
       }
-      //console.log('CURRENTLY I AM SEEING', tasks);
       const newTask = {
         id: null,
         name: taskName, 
@@ -198,11 +219,9 @@ const ScheduleScreen = () => {
       setTasks(newTasks);
       console.log(newTask);
       console.log(newTasks);
-
     } catch (error) {
       console.error("Error occurred: ", error);
     }
-
     // Resets settings for a new task to be created
     resetTaskForm();
   };
@@ -306,15 +325,23 @@ const ScheduleScreen = () => {
       } else {
         console.error("Task ID is null, cannot update in local storage.");
       }
-
-      const updatedTasks = tasks.map(task => task.id === updatedTask.id ? updatedTask : task);
+      let updatedTasks = [...tasks];
+      const isOverflow = overflowTasks.some((task) => task.id === updatedTask.id);
+      if (isOverflow) {
+        // Remove the task from the overflowTasks list/modal
+        const updatedOverflowTasks = overflowTasks.filter(task => task.id !== updatedTask.id);
+        setOverFlowTasks(updatedOverflowTasks);
+        updatedTasks.push(updatedTask);
+      } else {
+        // Update the task with the same id with new info
+        updatedTasks = tasks.map(task => task.id === updatedTask.id ? updatedTask : task);
+      }
+      // Re-sort the list and add it to tasks
       updatedTasks.sort((a,b) => new Date(a.start) - new Date(b.start));
-
       setTasks(updatedTasks);
     } catch (error) {
       console.error("Error occurred: ", error);
     }
-
     resetTaskForm();
   };
 
@@ -388,10 +415,35 @@ const ScheduleScreen = () => {
       // Remove the task from Google Calendar if it has an id
       try {
         await deleteEvent(accessToken, taskId);
-        console.log("task deleted.. task deleted: ", taskId);
-        
+        console.log("Task deleted: ", taskId);
+        const deletedTask = task;
+        const deletedStart = new Date(deletedTask.start);
+        const deletedEnd = new Date(deletedTask.end);
+        // tasks list but the deletedTask is left out
         const newList = tasks.filter((item) => item.id !== taskId);
-        setTasks(newList);
+
+        const replacingTasks = overflowTasks.filter((task) => {
+          const currentStart = new Date(task.start);
+          const currentEnd = new Date(task.end);
+
+          return (
+            (currentStart <= deletedStart && currentEnd >= deletedEnd) ||
+            (currentStart >= deletedStart && currentStart < deletedEnd) ||
+            (currentEnd > deletedStart && currentEnd <= deletedEnd)
+          );
+        });
+
+        let updatedTasks = [...newList, ...replacingTasks];
+
+        let updatedOverflowTasks = overflowTasks.filter(
+          (task) => !replacingTasks.includes(task)
+        );    
+
+        updatedTasks = updatedTasks.sort((a, b) => new Date(a.start) - new Date(b.start));
+        updatedOverflowTasks = updatedOverflowTasks.sort((a, b) => new Date(a.start) - new Date(b.start));
+
+        setTasks(updatedTasks);
+        setOverFlowTasks(updatedOverflowTasks);
         setSelectedTask(null);
       }
       catch (error) {
@@ -414,7 +466,7 @@ const ScheduleScreen = () => {
     const height = minCardHeight + newHeight + stretchHeight;
     useEffect(() => {
       setCardHeight(height);
-    }, [cardHeight]);
+    }, [task.start, task.end]);
     const topPosition = calculateTopPosition(task.id);    
       return (
         <View style={{ position: 'relative', flex: 1, width: '100%', height: cardHeight, marginTop: topPosition}}>
@@ -431,7 +483,7 @@ const ScheduleScreen = () => {
               {children}
               <Text 
                 style={[styles.priorityMark, 
-                  { color: task.priority == 4 ? 'red' : (task.priority == 5 ? 'yellow' : 'green'),
+                  { color: task.priority == 4 ? 'red' : (task.priority == 5 ? 'gold' : 'green'),
                     opacity: task.complete ? 0.2 : 1
                   }]}
               >!
@@ -471,9 +523,9 @@ const ScheduleScreen = () => {
               // If the tasks are the same hour like XX:00 (aka the border) we need to add 40px
               if (prevEnd.getMinutes() === 0 || taskStart.getMinutes() === 0) {
                 topPosition = gapinMin * 2 + 40;
-              }/* else {
+              } else {
                 topPosition = gapinMin * 2;
-              }*/
+              }
             } else { 
               topPosition = (gapinMin * 2) + gapinHrs * 40;
               if (prevEnd.getMinutes() === 0 || taskStart.getMinutes() === 0) {
@@ -496,17 +548,23 @@ const ScheduleScreen = () => {
           if (gapinMin % 60 != 0) {
             gapinHrs = gapinHrs - 1;
           }
+          //12:35PM -> 1:00PM
     
-          // If previous + current task end/start at the same point
+          // If previous + current task end/start at the same HOUR
           if (taskStart.getHours() === prevEnd.getHours()) {
             // If the tasks are the same hour like XX:00 (aka the border) we need to add 40px
-            if (prevEnd.getMinutes() === 0 || taskStart.getMinutes() === 0) {
+            if (prevEnd.getMinutes() == 0 || taskStart.getMinutes() == 0) {
               topPosition = gapinMin * 2 + 40;
             // If the tasks have the same hour BUT are not at the border
-            } 
-          } else { 
+            } else {
+              topPosition = gapinMin * 2;
+            }
+          } else { // if previous + current task are different hours
             topPosition = (gapinMin * 2) + gapinHrs * 40;
             if (prevEnd.getMinutes() === 0 || taskStart.getMinutes() === 0) {
+              //topPosition += 40;
+            }
+            if (prevEnd.getHours() != taskStart.getHours()) {
               topPosition += 40;
             }
           }
@@ -518,7 +576,7 @@ const ScheduleScreen = () => {
   };
 
   const OverflowCard = ({ children, taskId }) => {
-    const task = tasks.find(t => t.id === taskId);
+    const task = overflowTasks.find(t => t.id === taskId );
     //PERMANENTLY DELETES TASK
     const deleteAlert = () => {
       const name = task.name;
@@ -528,7 +586,6 @@ const ScheduleScreen = () => {
         [
           {
             text: 'Back',
-            onPress: () => console.log("back"),
             style: 'cancel',
           },
           {
@@ -549,8 +606,8 @@ const ScheduleScreen = () => {
         await deleteEvent(accessToken, taskId);
         console.log("task deleted.. task deleted: ", taskId);
         
-        const newList = tasks.filter((item) => item.id !== taskId);
-        setTasks(newList);
+        const newList = overflowTasks.filter((item) => item.id !== taskId);
+        setOverFlowTasks(newList);
         setSelectedTask(null);
       }
       catch (error) {
@@ -560,7 +617,7 @@ const ScheduleScreen = () => {
       return (
         <View style={{ position: 'relative', flex: 1, width: '100%', height: 60, margin: 2}}>
             <TouchableOpacity 
-              style={[styles.taskCard, { /*height: 40 */}]}
+              style={styles.taskCard}
               onPress={() => { viewTaskDetails(task); }}
               activeOpacity={1.0}
             >
@@ -797,12 +854,15 @@ const ScheduleScreen = () => {
             {/* Title */}
             <Text style={styles.modalTitle}>{"Overflow Folder"}</Text>
             {/* Overflow List */}
-              <View style={{justifyContent: 'center', height: 400, width: '100%'}}>
+              <View style={{justifyContent: 'center', height: 200, width: '100%'}}>
                 <ScrollView
                   scrollEnabled={true}
                 >
                   <View style={{ flex: 1, flexDirection: 'column'}}>
-                    {tasks.map((task) => (
+                    {overflowTasks.map((task) => (overflowTasks.length == 0 ? 
+                        <Text>
+                          No conflicting tasks found!
+                        </Text> : 
                         <OverflowCard key={task.id} taskId={task.id} style={{height: 20}}>
                           <Text style={styles.taskText}>
                             {task.name}
