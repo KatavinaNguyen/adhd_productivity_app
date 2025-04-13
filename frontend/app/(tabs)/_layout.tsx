@@ -19,17 +19,47 @@ export default function TabLayout() {
           headerShown: false,
           tabBarButton: HapticTab,
           tabBarBackground: TabBarBackground,
-          tabBarStyle: Platform.select({
-            ios: {
-              // Use a transparent background on iOS to show the blur effect
-              position: 'absolute',
-            },
-            default: {},
-          }),
-        }}
-      >
-        {/* Define your tab screens here */}
-      </Tabs>
-    </GestureHandlerRootView>
-  );
-}
+                     tabBarStyle: Platform.select({
+                       ios: {
+                         position: 'absolute',
+                       },
+                       default: {},
+                     }),
+                   }}
+                 >
+                 </Tabs>
+               </GestureHandlerRootView>
+             );
+           }
+
+/*
+~ old ugly nav in case kat wants it back to be faster
+
+           tabBarStyle: Platform.select({
+             ios: {
+               position: 'absolute',
+             },
+             default: {},
+           }),
+         }}
+       >
+       </Tabs>
+     </GestureHandlerRootView>
+   );
+ }
+
+
+
+
+           tabBarStyle: {
+             display: 'none', // Hide the bottom tab bar
+           },
+         }}
+       >
+         {}
+       </Tabs>
+     </GestureHandlerRootView>
+   );
+ }
+
+ */

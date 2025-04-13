@@ -7,6 +7,7 @@ import  Swipeable  from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { Colors } from "react-native/Libraries/NewAppScreen";
 import { MMKV } from 'react-native-mmkv';
 import { verifyToken, createEvent, updateEvent, deleteEvent, listEvents } from "../../server/server";
+import { useFocusEffect } from '@react-navigation/native';
 
 const tasksStorage = new MMKV();
 //key-value pair as follows taskStorage.set('task_id', JSON.stringify(tasks_object));
@@ -48,8 +49,6 @@ const ScheduleScreen = () => {
   // Time Setting (dates in UTC)
   const today = new Date();
   today.setHours(12,0,0,0);
-  const givenHalfTime = 14; //in 24hrs
-  const halfDayTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), givenHalfTime, 0, 0, 0);
   const [startTime, setStartTime] = useState(new Date(
     today.getFullYear(),
     today.getMonth(),
@@ -83,6 +82,34 @@ const ScheduleScreen = () => {
   // Load tasks from local storage
 
   // Load tasks from Google Calendar
+
+  const [halfTime, setHalfTime] = useState(null);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const getHalfTime = async () => {
+        try {
+          const storedHalf = await AsyncStorage.getItem('halfTime');
+          if (storedHalf) {
+            const parsedHalfTime = new Date(storedHalf);
+            setHalfTime(parsedHalfTime);
+            console.log("Loaded half-time:", parsedHalfTime);
+          }
+        } catch (error) {
+          console.error("Error loading half-time: ", error);
+        }
+      };    
+      getHalfTime();
+    }, [])
+  );
+  React.useEffect(() => {
+    if (selectedTab === "Half Day" && halfTime) {
+      setTimeSlots(generateTimeSlots(halfTime.getHours()));
+    } else if (selectedTab === "Full Day") {
+      setTimeSlots(generateTimeSlots(0));
+    }
+  }, [halfTime, selectedTab]);
+  
 
   const getTasksFromGoogleCalendar = async () => {
     const accessToken = await AsyncStorage.getItem('accessToken');
@@ -502,11 +529,11 @@ const ScheduleScreen = () => {
       let taskIndex = tasks.findIndex(t => t.id === taskId);
       const taskStart = new Date(task.start); // Current task's start time in datetime
       
-      if (selectedTab === 'Half Day' && taskStart >= halfDayTime) {
-        if (taskStart >= halfDayTime) {
-          const remainingTasks = tasks.filter(t => t.start >= halfDayTime);
+      if (selectedTab === 'Half Day' && taskStart >= halfTime) {
+        if (taskStart >= halfTime) {
+          const remainingTasks = tasks.filter(t => t.start >= halfTime);
           const newTaskIndex = remainingTasks.findIndex(t => t.id === taskId);
-          const subtractPosition = givenHalfTime * 160;
+          const subtractPosition = halfTime.getHours() * 160;
           
           if (newTaskIndex > 0) { // NOT the first task in our new list
             const prevTask = remainingTasks[newTaskIndex - 1];
@@ -514,21 +541,26 @@ const ScheduleScreen = () => {
     
             const gapinMin = (taskStart - prevEnd) / (1000*60);
             let gapinHrs = taskStart.getHours() - prevEnd.getHours();
+            // Difference in hours is re-calculated if there's leftover minutes between the hours
             if (gapinMin % 60 != 0) {
               gapinHrs = gapinHrs - 1;
-            }
+            } 
 
-            // If previous + current task end/start at the same point    
+            // If previous + current task end/start at the same HOUR
             if (taskStart.getHours() === prevEnd.getHours()) {
               // If the tasks are the same hour like XX:00 (aka the border) we need to add 40px
-              if (prevEnd.getMinutes() === 0 || taskStart.getMinutes() === 0) {
+              if (prevEnd.getMinutes() == 0 || taskStart.getMinutes() == 0) {
                 topPosition = gapinMin * 2 + 40;
+              // If the tasks have the same hour BUT are not at the border
               } else {
                 topPosition = gapinMin * 2;
               }
-            } else { 
+            } else { // if previous + current task are different hours
               topPosition = (gapinMin * 2) + gapinHrs * 40;
               if (prevEnd.getMinutes() === 0 || taskStart.getMinutes() === 0) {
+                //topPosition += 40;
+              }
+              if (prevEnd.getHours() != taskStart.getHours()) {
                 topPosition += 40;
               }
             }
@@ -547,9 +579,7 @@ const ScheduleScreen = () => {
           // Difference in hours is re-calculated if there's leftover minutes between the hours
           if (gapinMin % 60 != 0) {
             gapinHrs = gapinHrs - 1;
-          }
-          //12:35PM -> 1:00PM
-    
+          }    
           // If previous + current task end/start at the same HOUR
           if (taskStart.getHours() === prevEnd.getHours()) {
             // If the tasks are the same hour like XX:00 (aka the border) we need to add 40px
@@ -684,7 +714,7 @@ const ScheduleScreen = () => {
         animationType="slide"
         transparent={true}
         visible={modalVisible}
-        onRequestClose={() => resetTaskForm()}
+        onRequestClose={() => resetTaskForm() /* heya */}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
@@ -860,8 +890,9 @@ const ScheduleScreen = () => {
                 >
                   <View style={{ flex: 1, flexDirection: 'column'}}>
                     {overflowTasks.map((task) => (overflowTasks.length == 0 ? 
-                        <Text>
+                        <Text> 
                           No conflicting tasks found!
+                          {/*{selectedTask ? "Edit Task" : "Create a Task"} */}
                         </Text> : 
                         <OverflowCard key={task.id} taskId={task.id} style={{height: 20}}>
                           <Text style={styles.taskText}>
@@ -883,7 +914,7 @@ const ScheduleScreen = () => {
           <Text style={[styles.tabText, selectedTab === "Full Day" && styles.activeTabText]}>Full Day</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.tab, selectedTab === "Half Day" && styles.activeTab]} 
-        onPress={() => [setTimeSlots(generateTimeSlots(givenHalfTime)), setSelectedTab("Half Day")]}>
+        onPress={() => [setTimeSlots(generateTimeSlots(halfTime.getHours())), setSelectedTab("Half Day")]}>
           <Text style={[styles.tabText, selectedTab === "Half Day" && styles.activeTabText]}>Half Day</Text>
         </TouchableOpacity>
       </View>
@@ -916,7 +947,7 @@ const ScheduleScreen = () => {
                   .filter(task => {
                     if (selectedTab === "Half Day") {
                       const taskStart = task.start.getHours();
-                      return taskStart >= givenHalfTime;
+                      return taskStart >= halfTime.getHours();
                     } else {
                       return true;
                     }
