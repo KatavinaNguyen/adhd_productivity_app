@@ -102,6 +102,7 @@ const ScheduleScreen = () => {
       getHalfTime();
     }, [])
   );
+  
   React.useEffect(() => {
     if (selectedTab === "Half Day" && halfTime) {
       setTimeSlots(generateTimeSlots(halfTime.getHours()));
@@ -109,7 +110,6 @@ const ScheduleScreen = () => {
       setTimeSlots(generateTimeSlots(0));
     }
   }, [halfTime, selectedTab]);
-  
 
   const getTasksFromGoogleCalendar = async () => {
     const accessToken = await AsyncStorage.getItem('accessToken');
@@ -155,8 +155,20 @@ const ScheduleScreen = () => {
           const currentEnd = currentEvent.end.dateTime;
           const newEndTime = new Date(currentEnd); //.toString
 
-          const currentPriority = currentEvent.colorId;
-          //console.log(newStartTime, " + ", newEndTime);
+          let currentPriority = currentEvent.colorId == 8 ? 2 : currentEvent.colorId;
+          let currentComplete = false; //currentEvent.colorId == 8 ? true : false;
+          //const hello = currentEvent.extendedProperties?.private?.previousPriority ?? "not set";
+
+          if (currentEvent.colorId == 8) {
+            //gray, but what is previous prior?
+            if (currentEvent.extendedProperties.private.previousPriority != null) {
+              currentPriority = currentEvent.extendedProperties.private.previousPriority;
+            } 
+            currentComplete = true; 
+          } else { //priority is set!
+            currentComplete = false;
+          }
+          console.log(currentComplete, currentPriority);
           
           const newTask = {
             id: currentEvent.id,
@@ -165,7 +177,7 @@ const ScheduleScreen = () => {
             priority: currentPriority,
             start: newStartTime, 
             end: newEndTime, 
-            complete: false, //testing needed
+            complete: currentComplete,
           };
 
           const checkOverlap = newTasks.some((task) => {
@@ -268,11 +280,6 @@ const ScheduleScreen = () => {
         timeZone: 'UTC',
       },
       colorId: getColorID(task),
-      extendedProperties: {
-        private: {
-            tinyTasksTitle: 'TinyTasks'
-        }
-      }
     };       
     try {
       console.log("Sending request to create event with details:", eventDetails);
@@ -291,7 +298,7 @@ const ScheduleScreen = () => {
   };
 
   const getColorID = (task) => {
-    if (task.isComplete) { 
+    if (task.complete) {
       return 8; 
     } else {
       if (task.priority == "5" || task.priority == "4") {
@@ -374,26 +381,25 @@ const ScheduleScreen = () => {
 
   const updateGoogleCalendarEvent = async (task) => {
     const accessToken = await AsyncStorage.getItem('accessToken');
-
     const eventDetails = {
-        summary: task.name,
-        description: task.description,
-        start: {
-            dateTime: task.start,
-            timeZone: 'UTC',
-        },
-        end: {
-            dateTime: task.end,
-            timeZone: 'UTC',
-        },
-        colorId: getColorID(task),
+      summary: task.name,
+      description: task.description,
+      start: {
+          dateTime: task.start,
+          timeZone: 'UTC',
+      },
+      end: {
+          dateTime: task.end,
+          timeZone: 'UTC',
+      },
+      colorId: getColorID(task),
     };
 
     try {
-        await updateEvent(accessToken, task.id, eventDetails);
-        console.log("Event updated:", task.id);
+      await updateEvent(accessToken, task.id, eventDetails);
+      console.log("Event updated:", task.id);
     } catch (error) {
-        console.log("Error updating event:", error);
+      console.log("Error updating event:", error);
     }
   };
 
@@ -435,6 +441,32 @@ const ScheduleScreen = () => {
       );
       setTasks(updatedTasks);
       setSelectedTask(null);
+      try {
+        const accessToken = await AsyncStorage.getItem('accessToken');
+        task.complete = !(task.complete);
+        const eventDetails = {
+          summary: task.name,
+          description: task.description,
+          start: {
+              dateTime: task.start,
+              timeZone: 'UTC',
+          },
+          end: {
+              dateTime: task.end,
+              timeZone: 'UTC',
+          },
+          colorId: getColorID(task),
+          extendedProperties: {
+            private: {
+                previousPriority: task.priority
+            }
+          }
+        }; 
+        await updateEvent(accessToken, taskId, eventDetails);
+      } catch (error) {
+        console.error("Error marking event as complete in Google Calendar:", error);
+      }
+
     }
     //PERMANENTLY DELETES TASK
     const deleteTask = async () => {
@@ -461,10 +493,9 @@ const ScheduleScreen = () => {
         });
 
         let updatedTasks = [...newList, ...replacingTasks];
-
         let updatedOverflowTasks = overflowTasks.filter(
           (task) => !replacingTasks.includes(task)
-        );    
+        );
 
         updatedTasks = updatedTasks.sort((a, b) => new Date(a.start) - new Date(b.start));
         updatedOverflowTasks = updatedOverflowTasks.sort((a, b) => new Date(a.start) - new Date(b.start));
