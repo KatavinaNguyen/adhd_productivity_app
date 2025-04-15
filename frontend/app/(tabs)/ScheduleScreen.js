@@ -92,8 +92,12 @@ const ScheduleScreen = () => {
           const storedHalf = await AsyncStorage.getItem('halfTime');
           if (storedHalf) {
             const parsedHalfTime = new Date(storedHalf);
-            setHalfTime(parsedHalfTime);
-            console.log("Loaded half-time:", parsedHalfTime);
+            const currentDay = parsedHalfTime.getHours() >= 20 ? today.getDate() + 1 : today.getDate(); 
+            //console.log(currentDay);
+            const newHalfTime = new Date(today.getFullYear(), today.getMonth(), currentDay, parsedHalfTime.getHours(), 0, 0, 0);
+            setHalfTime(newHalfTime);
+            
+            //console.log("Loaded half-time:", newHalfTime);
           }
         } catch (error) {
           console.error("Error loading half-time: ", error);
@@ -156,19 +160,17 @@ const ScheduleScreen = () => {
           const newEndTime = new Date(currentEnd); //.toString
 
           let currentPriority = currentEvent.colorId == 8 ? 2 : currentEvent.colorId;
-          let currentComplete = false; //currentEvent.colorId == 8 ? true : false;
-          //const hello = currentEvent.extendedProperties?.private?.previousPriority ?? "not set";
+          let currentComplete = false; 
 
           if (currentEvent.colorId == 8) {
-            //gray, but what is previous prior?
-            if (currentEvent.extendedProperties.private.previousPriority != null) {
+            if (currentEvent.extendedProperties?.private?.previousPriority !== undefined) {
               currentPriority = currentEvent.extendedProperties.private.previousPriority;
             } 
             currentComplete = true; 
-          } else { //priority is set!
+          } else { 
             currentComplete = false;
           }
-          console.log(currentComplete, currentPriority);
+          //console.log(currentComplete, currentPriority);
           
           const newTask = {
             id: currentEvent.id,
@@ -194,10 +196,10 @@ const ScheduleScreen = () => {
           //Prevents tasks from being added every single refresh
           if (!taskExists) {
             if (checkOverlap) {
-              console.log("this task is an overflow: ", newTask.name);
+              //console.log("this task is an overflow: ", newTask.name);
               conflictTasks.push(newTask);
             } else { 
-              console.log("Task added successfully: ", newTask.name);
+              //console.log("Task added successfully: ", newTask.name);
               newTasks.push(newTask);
             }
           }
@@ -559,13 +561,12 @@ const ScheduleScreen = () => {
       const task = tasks.find(t => t.id === taskId);
       let taskIndex = tasks.findIndex(t => t.id === taskId);
       const taskStart = new Date(task.start); // Current task's start time in datetime
+      const remainingTasks = tasks.filter(t => new Date(t.start) >= new Date(halfTime));
+      const newTaskIndex = remainingTasks.findIndex(t => t.id === taskId);
+      const subtractPosition = halfTime.getHours() * 160;
       
-      if (selectedTab === 'Half Day' && taskStart >= halfTime) {
-        if (taskStart >= halfTime) {
-          const remainingTasks = tasks.filter(t => t.start >= halfTime);
-          const newTaskIndex = remainingTasks.findIndex(t => t.id === taskId);
-          const subtractPosition = halfTime.getHours() * 160;
-          
+      if (selectedTab === 'Half Day') {
+        if (taskStart >= halfTime) {          
           if (newTaskIndex > 0) { // NOT the first task in our new list
             const prevTask = remainingTasks[newTaskIndex - 1];
             const prevEnd = new Date(prevTask.end);
@@ -595,8 +596,10 @@ const ScheduleScreen = () => {
                 topPosition += 40;
               }
             }
+            //console.log('not the first: ', task.name);
           } else {
             topPosition = baseTop + (taskStart.getHours() * 160 + taskStart.getMinutes() * 2) - subtractPosition;
+            //console.log("first: ", task.name);
           }
         }
       } else {
@@ -991,6 +994,7 @@ const ScheduleScreen = () => {
                     </Card>
                 ))}
               </View>
+              <View style={{ height: 80 }} />
             </ScrollView>
           </View>
 

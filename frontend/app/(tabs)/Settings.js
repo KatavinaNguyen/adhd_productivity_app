@@ -76,7 +76,7 @@ const Settings = () => {
         if (storedTime) {
           const parsedTime = new Date(storedTime);
           setGivenHalfTime(parsedTime);
-          setTempHalfTime(parsedTime); // if you're using a temp version for preview
+          setTempHalfTime(parsedTime);
           console.log("Loaded half-time from storage:", parsedTime);
         }
       } catch (error) {
@@ -124,7 +124,10 @@ const Settings = () => {
           <Text style={styles.modalTitle}>Half-Day Mark</Text>
           {/* Time Selection Modal */}
             <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.timeButton} onPress={() => setTimePickerOpen(true)}>
+              <TouchableOpacity style={styles.timeButton} onPress={() => {
+                setTempHalfTime(givenHalfTime);
+                setTimePickerOpen(true);
+              }}>
                 <Text style={styles.buttonText}>{displayHalfTime}</Text>
                 {/* START TIME */}
                 <DatePicker
@@ -132,6 +135,7 @@ const Settings = () => {
                   open={timePickerOpen}
                   date={tempHalfTime}
                   mode="time"
+                  minuteInterval={60}
                   minimumDate = {new Date(today.getFullYear(), today.getMonth(), today.getDate(), 1, 0, 0, 0)}
                   maximumDate = {new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 0, 0, 0)}
                   onConfirm={(selectedTime) => {
