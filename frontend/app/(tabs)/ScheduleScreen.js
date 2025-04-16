@@ -8,6 +8,10 @@ import { Colors } from "react-native/Libraries/NewAppScreen";
 import { MMKV } from 'react-native-mmkv';
 import { verifyToken, createEvent, updateEvent, deleteEvent, listEvents } from "../../server/server";
 import { useFocusEffect } from '@react-navigation/native';
+import { registerRootComponent } from 'expo';
+import Index from './index';
+
+registerRootComponent(Index);
 
 const tasksStorage = new MMKV();
 //key-value pair as follows taskStorage.set('task_id', JSON.stringify(tasks_object));
@@ -425,6 +429,7 @@ const ScheduleScreen = () => {
     const task = tasks.find(t => t.id === taskId);
     const completionText = task.complete ? "Undo" : "Complete";
     const [cardHeight, setCardHeight] = useState(0);
+    const [topPosition, setTopPosition] = useState(0);
 
     const renderLeftActions = () => (
       <View style={styles.leftAction}>
@@ -524,10 +529,13 @@ const ScheduleScreen = () => {
     }
     const stretchHeight = stretchDifference > 0 ? stretchDifference * 40 : 0;
     const height = minCardHeight + newHeight + stretchHeight;
+    
     useEffect(() => {
       setCardHeight(height);
+      const calculatedTop = calculateTopPosition(task.id);
+      setTopPosition(calculatedTop);
     }, [task.start, task.end]);
-    const topPosition = calculateTopPosition(task.id);    
+
       return (
         <View style={{ position: 'relative', flex: 1, width: '100%', height: cardHeight, marginTop: topPosition}}>
           <Swipeable

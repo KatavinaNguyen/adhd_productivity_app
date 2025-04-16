@@ -1,12 +1,40 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Animated, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { useRouter } from 'expo-router';
+import { Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Switch,
+  Alert,
+  Animated,
+} from "react-native";
+import { useRouter } from "expo-router";
 import DatePicker from 'react-native-date-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 const Settings = () => {
   const router = useRouter();
+  const [pushEnabled, setPushEnabled] = useState(true);
+
+  const handleLogout = () => {
+    Alert.alert("Logged out", "You have been logged out.");
+    router.replace('/');
+  };
+
+  const handleHelp = () => {
+    Alert.alert(
+      "Help & Support",
+      "For support, feedback, or questions:\n\n📧 support@tinytasks.com\n\n🌐 tinytasks.com"
+    );
+  };
+
+  const handlePrivacy = () => {
+    Alert.alert(
+      "Privacy Policy",
+      "We respect your privacy. Your data is stored securely and never shared without your consent. For full details, visit tinytasks.com/privacy."
+    );
+  };
 
   const [accountOpen, setAccountOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -98,10 +126,7 @@ const Settings = () => {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerText}>Settings</Text>
-      </View>
+      <Text style={styles.title}>Settings</Text>
 
     <Modal
       animationType="slide"
@@ -163,84 +188,62 @@ const Settings = () => {
       </View>
     </Modal>
 
-      {/* Settings List - Accordion */}
       <View style={styles.section}>
-        {/* Account Section */}
-        <TouchableOpacity style={styles.listButton} onPress={() => toggleAccordion("account")}>
-          <Text style={styles.listText}>Account</Text>
-        </TouchableOpacity>
-        <Animated.View style={{ height: accountHeight, overflow: "hidden" }}>
-          <TouchableOpacity style={styles.accordionContent} onPress={() => setModalVisible(true)}>
-            <Text style={styles.accordionText}>Set Half-Day Mark</Text>
-          </TouchableOpacity>
-        </Animated.View>
+        <View style={styles.row}>
+          <Text style={styles.label}>Push Notifications</Text>
+          <Switch
+            value={pushEnabled}
+            onValueChange={setPushEnabled}
+            thumbColor={pushEnabled ? "#FF7F50" : "#ccc"}
+            trackColor={{ false: "#eee", true: "#FFDAB9" }}
+          />
+        </View>
 
-        {/* Notifications Section */}
-        <TouchableOpacity style={styles.listButton} onPress={() => toggleAccordion("notifications")}>
-          <Text style={styles.listText}>Manage Notifications</Text>
+        <TouchableOpacity style={styles.optionButton} onPress={() => setModalVisible(true)}>
+          <Text style={styles.optionText}>Customize Half-Day</Text>
         </TouchableOpacity>
-        <Animated.View style={{ height: notificationsHeight, overflow: "hidden" }}>
-          <View style={styles.accordionContent}>
-            <Text style={styles.accordionText}>Notifications Settings Content</Text>
-          </View>
-        </Animated.View>
 
-        {/* Help Section */}
-        <TouchableOpacity style={styles.listButton} onPress={() => toggleAccordion("help")}>
-          <Text style={styles.listText}>Help</Text>
+        <TouchableOpacity style={styles.optionButton} onPress={handleHelp}>
+          <Text style={styles.optionText}>Help</Text>
         </TouchableOpacity>
-        <Animated.View style={{ height: helpHeight, overflow: "hidden" }}>
-          <View style={styles.accordionContent}>
-            <Text style={styles.accordionText}>Help Content</Text>
-          </View>
-        </Animated.View>
+
+        <TouchableOpacity style={styles.optionButton} onPress={handlePrivacy}>
+          <Text style={styles.optionText}>Privacy</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Home Button */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => router.push("/ScheduleScreen")}
-        >
-          <Text style={styles.actionButtonText}>Return to Dashboard</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <Text style={styles.logoutText}>Log Out</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.dashboardButton} onPress={() => router.push("/ScheduleScreen")}>
+        <Text style={styles.dashboardText}>Return to Dashboard</Text>
+      </TouchableOpacity>
     </View>
   );
 };
 
-// Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFBEA",
-    paddingTop: 40,
-    paddingHorizontal: 16,
+    paddingTop: 50,
+    paddingHorizontal: 20,
   },
-  header: {
-    backgroundColor: "#FF7F50",
-    paddingVertical: 15,
-    borderRadius: 10,
-    alignItems: "center",
-    marginBottom: 30,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  headerText: {
-    fontSize: 24,
-    color: "#FFF",
+  title: {
+    fontSize: 26,
     fontWeight: "bold",
+    color: "#333",
+    marginBottom: 30,
+    textAlign: "center",
   },
   section: {
     backgroundColor: "#FFF",
     borderRadius: 12,
     padding: 20,
-    marginBottom: 30,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 5,
     elevation: 3,
   },
@@ -264,9 +267,8 @@ const styles = StyleSheet.create({
   accordionContent: {
     backgroundColor: "#FFE5B4",
     borderRadius: 10,
-    padding: 10,
-    marginTop: 10,
-    elevation: 2,
+    paddingVertical: 16,
+    alignItems: "center",
   },
   accordionText: {
     fontSize: 16,
@@ -278,18 +280,30 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     backgroundColor: "#FF7F50",
-    paddingVertical: 15,
-    paddingHorizontal: 25,
     borderRadius: 10,
     alignItems: "center",
     width: "80%",
     marginBottom: 20,
     elevation: 5,
   },
-  actionButtonText: {
-    fontSize: 18,
+  dashboardText: {
     color: "#FFF",
     fontWeight: "bold",
+    marginBottom: 15,
+  },
+  timeButton: {
+    backgroundColor: "gray",
+    borderRadius: 5,
+    height: 35,
+    flex: 1,
+    marginHorizontal: 15,
+    marginVertical: 20,
+  },
+  confirmButton: {
+    backgroundColor: "#FF7F50",
+    flex: 1,
+    marginLeft: 5,
+    borderRadius: 5,
   },
   modalOverlay: {
     flex: 1,
@@ -327,6 +341,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     width: "100%",
   },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
   modalTitle: {
     fontSize: 18,
     fontWeight: "bold",
@@ -345,6 +365,46 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 5,
     borderRadius: 5,
+  },
+  label: {
+    fontSize: 17,
+    color: "#333",
+  },
+  optionButton: {
+    backgroundColor: "#F3F3F3",
+    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    marginBottom: 15,
+  },
+  optionText: {
+    fontSize: 16,
+    color: "#444",
+    fontWeight: "500",
+  },
+  logoutButton: {
+    marginTop: 30,
+    backgroundColor: "#3d3d3d",
+    borderRadius: 10,
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  logoutText: {
+    color: "#FFF",
+    fontSize: 17,
+    fontWeight: "bold",
+  },
+  dashboardButton: {
+    marginTop: 20,
+    backgroundColor: "#FF7F50",
+    borderRadius: 10,
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  dashboardText: {
+    color: "#FFF",
+    fontSize: 17,
+    fontWeight: "bold",
   },
 });
 

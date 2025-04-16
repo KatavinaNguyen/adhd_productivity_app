@@ -1,146 +1,212 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
+  Animated,
   Image,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  Modal,
 } from "react-native";
-import { useRouter } from 'expo-router';
- 
+import { useRouter } from "expo-router";
+
+const stampImages = [
+  require("../../assets/images/books.png"),
+  require("../../assets/images/calculator_5861015.png"),
+  require("../../assets/images/laptop_5860866.png"),
+  require("../../assets/images/maths_5860816.png"),
+  require("../../assets/images/mortarboard.png"),
+  require("../../assets/images/ruler.png"),
+  require("../../assets/images/test-tubes_5861018.png"),
+];
+
+const tasks = [
+  "Submit HW2",
+  "Do laundry",
+  "Group Project Meeting",
+  "Study for midterm",
+  "Take out trash",
+  "Start HW3",
+];
+
 const DailyReflection = () => {
   const router = useRouter();
-  const tasks = [
-    "Data Structures HW",
-    "Grocery Shopping",
-    "Team Meeting",
-    "Walk the Dog",
-    "Volunteer Shift",
-    "Library Book Return",
-  ];
+  const [modalVisible, setModalVisible] = useState(false);
+
+  // Create Animated Values for each task
+  const animations = useRef(tasks.map(() => new Animated.Value(-300))).current;
+
+  const handleDownloadPDF = () => {
+    setModalVisible(true);
+    setTimeout(() => setModalVisible(false), 2500);
+  };
+
+  // Animate tasks on mount
+  useEffect(() => {
+    const animationsSequence = animations.map((anim, i) =>
+      Animated.spring(anim, {
+        toValue: 0,
+        delay: i * 100,
+        useNativeDriver: true,
+      })
+    );
+    Animated.stagger(100, animationsSequence).start();
+  }, []);
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
+      <View style={styles.notebookHeader}>
         <Text style={styles.headerText}>Daily Reflection</Text>
       </View>
 
-      {/* Focus Mode Tasks */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Focus Mode</Text>
+      <View style={styles.page}>
+        <Text style={styles.sectionTitle}>Today's Focus</Text>
         <ScrollView contentContainerStyle={styles.taskList}>
           {tasks.map((task, index) => (
-            <TouchableOpacity key={index} style={styles.taskButton}>
-              <Text style={styles.taskText}>{task}</Text>
-            </TouchableOpacity>
+            <Animated.View
+              key={index}
+              style={{ transform: [{ translateX: animations[index] }] }}
+            >
+              <View style={styles.taskLine}>
+                <Text style={styles.taskText}>{task}</Text>
+              </View>
+            </Animated.View>
           ))}
         </ScrollView>
       </View>
 
-      {/* Rewards Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Rewards</Text>
+      <View style={styles.page}>
+        <Text style={styles.sectionTitle}>Stamps Earned</Text>
         <View style={styles.rewardsContainer}>
           {Array(12)
             .fill()
             .map((_, index) => (
               <Image
                 key={index}
-                source={require("../../assets/images/reward-icon.png")} 
+                source={stampImages[index % stampImages.length]}
                 style={styles.rewardImage}
               />
             ))}
         </View>
       </View>
 
-      {/* Buttons */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.actionButton}>
-          <Text style={styles.actionButtonText}>Download PDF</Text>
+      <View style={styles.buttonRow}>
+        <TouchableOpacity style={styles.button} onPress={handleDownloadPDF}>
+          <Text style={styles.buttonText}>Download PDF</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/ScheduleScreen")}>
-          <Text style={styles.actionButtonText}>Load New Day</Text>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => router.push("/ScheduleScreen")}
+        >
+          <Text style={styles.buttonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
+
+      <Modal visible={modalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalText}>
+              📧 PDF has been sent to your email!
+            </Text>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
 
-// Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFBEA",
-    paddingTop: 40,
+    backgroundColor: "#FDF6E3",
+    paddingTop: 50,
     paddingHorizontal: 16,
   },
-  header: {
-    backgroundColor: "#333",
-    paddingVertical: 15,
-    borderRadius: 8,
+  notebookHeader: {
     alignItems: "center",
     marginBottom: 20,
   },
   headerText: {
-    fontSize: 18,
-    color: "#FFF",
+    fontSize: 24,
     fontWeight: "bold",
+    color: "#333",
   },
-  section: {
-    backgroundColor: "#F8F8F8",
+  page: {
+    backgroundColor: "#FFF",
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: "#E5DED0",
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "bold",
     color: "#FF7F50",
     marginBottom: 12,
   },
   taskList: {
-    flexDirection: "column",
-    gap: 10,
+    gap: 12,
   },
-  taskButton: {
-    backgroundColor: "#ECECEC",
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
+  taskLine: {
+    paddingVertical: 6,
+    paddingLeft: 6,
+    borderBottomColor: "#EAEAEA",
+    borderBottomWidth: 1,
   },
   taskText: {
-    fontSize: 14,
-    color: "#333",
+    fontSize: 16,
+    color: "#444",
   },
   rewardsContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
-    gap: 8,
+    gap: 12,
+    marginTop: 10,
   },
   rewardImage: {
-    width: 40,
-    height: 40,
+    width: 45,
+    height: 45,
+    resizeMode: "contain",
   },
-  buttonContainer: {
+  buttonRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    marginTop: 10,
   },
-  actionButton: {
+  button: {
     backgroundColor: "#FF7F50",
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    borderRadius: 8,
     flex: 1,
-    alignItems: "center",
     marginHorizontal: 5,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    elevation: 2,
   },
-  actionButtonText: {
+  buttonText: {
     fontSize: 16,
     color: "#FFF",
     fontWeight: "bold",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalBox: {
+    backgroundColor: "#FFF",
+    padding: 25,
+    borderRadius: 10,
+    alignItems: "center",
+    elevation: 6,
+  },
+  modalText: {
+    fontSize: 16,
+    color: "#333",
   },
 });
 
