@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert, Modal, Pressable, TextInput, Touchable } from "react-native";
+import React, { useEffect, useState } from "react";
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert, Modal, Pressable, TextInput, Touchable } from "react-native";
 import { useRouter } from "expo-router";
 import DatePicker from 'react-native-date-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -17,6 +17,8 @@ const ScheduleScreen = () => {
   const [timeSlots, setTimeSlots] = useState(generateTimeSlots(0));
   const [modalVisible, setModalVisible] = useState(false);
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
+  const [overflowModalVisible, setOverflowModalVisible] = useState(false);
+
   const [selectedTab, setSelectedTab] = useState("Full Day");
 
   // Task Creation Details
@@ -26,6 +28,9 @@ const ScheduleScreen = () => {
   const [priority, setPriority] = useState(2);
   const [complete, setComplete] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
+
+  // Overflow Settings
+  const [overflowTasks, setOverFlowTasks] = useState([]);
 
   // Priority Setting
   // Google Calendar color ids: 2 = green, 5 = yellow, 4 = red
@@ -41,8 +46,9 @@ const ScheduleScreen = () => {
   ];
 
   // Time Setting (dates in UTC)
-  const givenHalfTime = 14; //in 24hrs
   const today = new Date();
+  const givenHalfTime = 14; //in 24hrs
+  const halfDayTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), givenHalfTime, 0, 0, 0);
   const [startTime, setStartTime] = useState(new Date(
     today.getFullYear(),
     today.getMonth(),
@@ -71,7 +77,7 @@ const ScheduleScreen = () => {
     month: "short",
     day: "2-digit",
     year: "numeric",
-  }).toUpperCase();  
+  }).toUpperCase();
 
   // Load tasks from local storage
 
@@ -110,6 +116,7 @@ const ScheduleScreen = () => {
         // }
 
         let events = await getTasksFromGoogleCalendar();
+        let newTasks = [...tasks];
         for (let i = 0; i < events.length; i++) {
           const currentEvent = events[i];
 
@@ -118,24 +125,25 @@ const ScheduleScreen = () => {
 
           const currentEnd = currentEvent.end.dateTime;
           const newEndTime = new Date(currentEnd).toString();
-          
+
+          const currentPriority = currentEvent.colorId;
+
           const newTask = {
             id: currentEvent.id,
-            name: currentEvent.summary, 
-            description: currentEvent.description == undefined ? "" : currentEvent.description, 
-            priority: currentEvent.colorId, //testing needed
-            start: newStartTime, 
-            end: newEndTime, 
+            name: currentEvent.summary,
+            description: currentEvent.description == undefined ? "" : currentEvent.description,
+            priority: currentPriority,
+            start: newStartTime,
+            end: newEndTime,
             complete: false, //testing needed
           };
-
-          const taskExists = tasks.some((task ) => task.id === newTask.id);
+          const taskExists = newTasks.some((task) => task.id === newTask.id);
           if (!taskExists) {
-            const newTasks = [...tasks, newTask].sort((a, b) => new Date(a.start) - new Date(b.start));
-            setTasks(newTasks );
+            newTasks.push(newTask);
           }
         }
-        console.log("Tasks loaded from Google Calendar:", events);
+        newTasks = newTasks.sort((a, b) => new Date(a.start) - new Date(b.start));
+        setTasks(newTasks);
       } catch (error) {
         console.error("Error loading tasks from local storage:", error);
       }
@@ -158,17 +166,17 @@ const ScheduleScreen = () => {
         alert("Overlap Error -- Please select another time slot");
         return;
       }
-  
+      //console.log('CURRENTLY I AM SEEING', tasks);
       const newTask = {
         id: null,
-        name: taskName, 
-        description: description, 
+        name: taskName,
+        description: description,
         priority: priority,
-        start: startTime, 
-        end: endTime, 
+        start: startTime,
+        end: endTime,
         complete: complete,
       };
-      
+
       // Prevents google calendar from creating the event twice
       setTimeout(() => { }, 5000);
 
@@ -186,7 +194,7 @@ const ScheduleScreen = () => {
       let taskDet = tasksStorage.getString(newTask.id)
       console.log(JSON.parse(taskDet));
 
-      const newTasks = [...tasks, newTask].sort((a,b) => new Date(a.start) - new Date(b.start));   
+      const newTasks = [...tasks, newTask].sort((a,b) => new Date(a.start) - new Date(b.start));
       setTasks(newTasks);
       console.log(newTask);
       console.log(newTasks);
@@ -219,16 +227,16 @@ const ScheduleScreen = () => {
             tinyTasksTitle: 'TinyTasks'
         }
       }
-    };       
+    };
     try {
       console.log("Sending request to create event with details:", eventDetails);
       // Local Address for Mac's: http://127.0.0.1:3000/google/calendar/schedule_event
       // const response = await fetch("http://10.0.2.2:3000/google/calendar/schedule_event", {
       const event = await createEvent(accessToken, eventDetails);
       console.log("Event created:", event);
-      
+
       setTimeout(() => { }, 5000);
-  
+
       return event.id
     } catch (error) {
       console.error("Error creating event:", error);
@@ -237,8 +245,8 @@ const ScheduleScreen = () => {
   };
 
   const getColorID = (task) => {
-    if (task.isComplete) { 
-      return 8; 
+    if (task.isComplete) {
+      return 8;
     } else {
       if (task.priority == "5" || task.priority == "4") {
         return task.priority;
@@ -303,7 +311,6 @@ const ScheduleScreen = () => {
       updatedTasks.sort((a,b) => new Date(a.start) - new Date(b.start));
 
       setTasks(updatedTasks);
-      resetTaskForm();
     } catch (error) {
       console.error("Error occurred: ", error);
     }
@@ -352,27 +359,28 @@ const ScheduleScreen = () => {
     setDetailsModalVisible(true);
   };
 
-  const Card = ({ children, taskId, onPress }) => {
+  const Card = ({ children, taskId }) => {
     const task = tasks.find(t => t.id === taskId);
     const completionText = task.complete ? "Undo" : "Complete";
+    const [cardHeight, setCardHeight] = useState(0);
+
     const renderLeftActions = () => (
       <View style={styles.leftAction}>
         <Text style={styles.completeText}>{completionText}</Text>
       </View>
     );
     const renderRightActions = () => (
-      <View style={styles.rightAction}>
+      <View style={[styles.rightAction]}>
         <Text style={styles.deleteText}>Delete</Text>
       </View>
     );
     //MARKS TASK AS COMPLETE
     const completeTask = async ()  => {
-      const updatedTasks = tasks.map(t => 
+      const updatedTasks = tasks.map(t =>
         t.id === task.id ? { ...t, complete: !t.complete } : t
       );
       setTasks(updatedTasks);
       setSelectedTask(null);
-
     }
     //PERMANENTLY DELETES TASK
     const deleteTask = async () => {
@@ -381,7 +389,7 @@ const ScheduleScreen = () => {
       try {
         await deleteEvent(accessToken, taskId);
         console.log("task deleted.. task deleted: ", taskId);
-        
+
         const newList = tasks.filter((item) => item.id !== taskId);
         setTasks(newList);
         setSelectedTask(null);
@@ -403,133 +411,213 @@ const ScheduleScreen = () => {
       stretchDifference--;
     }
     const stretchHeight = stretchDifference > 0 ? stretchDifference * 40 : 0;
-    const cardHeight = minCardHeight + newHeight + stretchHeight;
-
+    const height = minCardHeight + newHeight + stretchHeight;
+    useEffect(() => {
+      setCardHeight(height);
+    }, [cardHeight]);
     const topPosition = calculateTopPosition(task.id);
-    
       return (
-        <View style={{ position: 'relative', flex: 1, width: '100%', height: cardHeight, marginTop: topPosition }}>
+        <View style={{ position: 'relative', flex: 1, width: '100%', height: cardHeight, marginTop: topPosition}}>
           <Swipeable
             renderLeftActions={renderLeftActions}
             renderRightActions={renderRightActions}
-            onSwipeableOpen={(direction) => (direction == "left") ? completeTask() : deleteTask()}
+            onSwipeableWillOpen={(direction) => (direction == "left") ? completeTask() : deleteTask()}
           >
-            <TouchableOpacity 
-              style={[styles.taskCard, { height: cardHeight }]}
+            <TouchableOpacity
+              style={[styles.taskCard, { height: cardHeight, paddingTop: cardHeight / 2.7,}]}
               onPress={() => { viewTaskDetails(task); }}
-              activeOpacity={0.7}
+              activeOpacity={1.0}
             >
               {children}
-              <Text 
-                style={[styles.priorityMark, 
-                  { color: task.priority === 4 ? 'red' : (task.priority === 5 ? 'yellow' : 'green'),
+              <Text
+                style={[styles.priorityMark,
+                  { color: task.priority == 4 ? 'red' : (task.priority == 5 ? 'yellow' : 'green'),
                     opacity: task.complete ? 0.2 : 1
                   }]}
               >!
               </Text>
-
             </TouchableOpacity>
           </Swipeable>
         </View>
       );
-    };
+  };
 
-    const calculateTopPosition = (taskId) => {
-      const baseTop = 30;
+  // Calculates the position of the top of the card so it aligns properly with the timeline
+  const calculateTopPosition = (taskId) => {
+      const baseTop = 30; // Underneath every time (ex. 12:00AM) we need to space out at least 30px
       let topPosition = 0;
-    
       const task = tasks.find(t => t.id === taskId);
-      const taskIndex = tasks.findIndex(t => t.id === taskId);
-      task.start = new Date(task.start);
-    
-      const halfDayTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), givenHalfTime, 0, 0, 0);
+      let taskIndex = tasks.findIndex(t => t.id === taskId);
+      const taskStart = new Date(task.start); // Current task's start time in datetime
 
-      if (selectedTab === 'Half Day') {
-        if (task.start >= halfDayTime) {
+      if (selectedTab === 'Half Day' && taskStart >= halfDayTime) {
+        if (taskStart >= halfDayTime) {
           const remainingTasks = tasks.filter(t => t.start >= halfDayTime);
           const newTaskIndex = remainingTasks.findIndex(t => t.id === taskId);
-          
           const subtractPosition = givenHalfTime * 160;
-          
+
           if (newTaskIndex > 0) { // NOT the first task in our new list
             const prevTask = remainingTasks[newTaskIndex - 1];
             const prevEnd = new Date(prevTask.end);
-    
-            const gapinMin = (task.start - prevEnd) / (1000*60);
-            const gapStretchDifference = task.start.getHours() - prevEnd.getHours();
-    
-            if (task.start.getHours() === prevEnd.getHours()) {
-              if (prevEnd.getMinutes() === 0 || task.start.getMinutes() === 0) {
+
+            const gapinMin = (taskStart - prevEnd) / (1000*60);
+            let gapinHrs = taskStart.getHours() - prevEnd.getHours();
+            if (gapinMin % 60 != 0) {
+              gapinHrs = gapinHrs - 1;
+            }
+
+            // If previous + current task end/start at the same point
+            if (taskStart.getHours() === prevEnd.getHours()) {
+              // If the tasks are the same hour like XX:00 (aka the border) we need to add 40px
+              if (prevEnd.getMinutes() === 0 || taskStart.getMinutes() === 0) {
                 topPosition = gapinMin * 2 + 40;
-              } else {
+              }/* else {
                 topPosition = gapinMin * 2;
-              }
-            } else { 
-              topPosition = (gapinMin * 2) + gapStretchDifference * 40;
-              if (prevEnd.getMinutes() === 0 || task.start.getMinutes() === 0) {
+              }*/
+            } else {
+              topPosition = (gapinMin * 2) + gapinHrs * 40;
+              if (prevEnd.getMinutes() === 0 || taskStart.getMinutes() === 0) {
                 topPosition += 40;
               }
             }
-            if (gapinMin <= 5) {
-              topPosition += gapinMin;
-            }
           } else {
-            topPosition = baseTop + (task.start.getHours() * 160 + task.start.getMinutes() * 2) - subtractPosition;
+            topPosition = baseTop + (taskStart.getHours() * 160 + taskStart.getMinutes() * 2) - subtractPosition;
           }
-        } else {
-          topPosition = baseTop + (task.start.getHours() * 160 + task.start.getMinutes() * 2);
         }
       } else {
-        if (taskIndex > 0) { // NOT the first task in our list
+        // When the current task is NOT the first of the day
+        if (taskIndex > 0) {
           const prevTask = tasks[taskIndex - 1];
           const prevEnd = new Date(prevTask.end);
-    
-          const gapinMin = (task.start - prevEnd) / (1000*60);
-          const gapStretchDifference = task.start.getHours() - prevEnd.getHours();
-    
-          if (task.start.getHours() === prevEnd.getHours()) {
-            if (prevEnd.getMinutes() === 0 || task.start.getMinutes() === 0) {
+
+          const gapinMin = (taskStart - prevEnd) / (1000*60);
+          let gapinHrs = taskStart.getHours() - prevEnd.getHours();
+          // Difference in hours is re-calculated if there's leftover minutes between the hours
+          if (gapinMin % 60 != 0) {
+            gapinHrs = gapinHrs - 1;
+          }
+
+          // If previous + current task end/start at the same point
+          if (taskStart.getHours() === prevEnd.getHours()) {
+            // If the tasks are the same hour like XX:00 (aka the border) we need to add 40px
+            if (prevEnd.getMinutes() === 0 || taskStart.getMinutes() === 0) {
               topPosition = gapinMin * 2 + 40;
-            } else {
-              topPosition = gapinMin * 2;
+            // If the tasks have the same hour BUT are not at the border
             }
-          } else { 
-            topPosition = (gapinMin * 2) + gapStretchDifference * 40;
-            if (prevEnd.getMinutes() === 0 || task.start.getMinutes() === 0) {
+          } else {
+            topPosition = (gapinMin * 2) + gapinHrs * 40;
+            if (prevEnd.getMinutes() === 0 || taskStart.getMinutes() === 0) {
               topPosition += 40;
             }
           }
-          if (gapinMin <= 5) {
-            topPosition += gapinMin;
-          }
         } else {
-          topPosition = baseTop + (task.start.getHours() * 160 + task.start.getMinutes() * 2);
+          topPosition = baseTop + (taskStart.getHours() * 160 + taskStart.getMinutes() * 2);
         }
       }
-    
       return topPosition;
-    };
-    
+  };
+
+  const OverflowCard = ({ children, taskId }) => {
+    const task = tasks.find(t => t.id === taskId);
+    //PERMANENTLY DELETES TASK
+    const deleteAlert = () => {
+      const name = task.name;
+      Alert.alert(
+        'Delete Task',
+        'Are you sure you want to delete ' + task.name + '?',
+        [
+          {
+            text: 'Back',
+            onPress: () => console.log("back"),
+            style: 'cancel',
+          },
+          {
+            text: 'Delete Task',
+            onPress: () => deleteTask(),
+            style: 'cancel',
+          },
+        ],
+        {
+          cancelable: true,
+        },
+      );
+    }
+    const deleteTask = async () => {
+      const accessToken = await AsyncStorage.getItem('accessToken');
+      // Remove the task from Google Calendar if it has an id
+      try {
+        await deleteEvent(accessToken, taskId);
+        console.log("task deleted.. task deleted: ", taskId);
+
+        const newList = tasks.filter((item) => item.id !== taskId);
+        setTasks(newList);
+        setSelectedTask(null);
+      }
+      catch (error) {
+        console.error("Error deleting event from Google Calendar:", error);
+      }
+    }
+      return (
+        <View style={{ position: 'relative', flex: 1, width: '100%', height: 60, margin: 2}}>
+            <TouchableOpacity
+              style={[styles.taskCard, { /*height: 40 */}]}
+              onPress={() => { viewTaskDetails(task); }}
+              activeOpacity={1.0}
+            >
+              {children}
+              <TouchableOpacity
+                style={[styles.trashIcon]}
+                onPress={() => { deleteAlert(); }}
+                activeOpacity={1.0}
+              >
+                <Image
+                  source={require('../../assets/images/trash.png')}
+                  style={{width: 20, height: 20}}
+                />
+              </TouchableOpacity>
+              <Text style={styles.detailText}>{new Date(task.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}-
+               {new Date(task.end).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</Text>
+            </TouchableOpacity>
+        </View>
+      );
+  };
 
   return (
     <View style={styles.container}>
       {/* Header Section */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerIcon} onPress={() => router.push("/index")}>
-          <Text style={styles.iconText}>←</Text>
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity style={styles.headerIcon} onPress={() => setOverflowModalVisible(true)}>
+            <Image
+              source={require('../../assets/images/arrow.png')}
+              style={{width: 20, height: 20}}
+            />
+          </TouchableOpacity>
+        </View>
         <View style={styles.headerButtons}>
           <TouchableOpacity onPress={() => router.push("/FocusMode")}>
-            <Text style={styles.iconText}>⏱️</Text>
+            <Image
+              source={require('../../assets/images/clock.png')}
+              style={{width: 27, height: 27}}
+            />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push("/StampBook")}>
-            <Text style={styles.iconText}>📓</Text>
+            <Image
+              source={require('../../assets/images/book.png')}
+              style={{width: 30, height: 30}}
+            />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => [setModalVisible(true), setSelectedTask(null)]}>
-            <Text style={styles.iconText}>+</Text>
+            <Image
+              source={require('../../assets/images/add.png')}
+              style={{width: 29, height: 29}}
+            />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push("/Settings")}>
-            <Text style={styles.iconText}>⚙️</Text>
+            <Image
+              source={require('../../assets/images/gear.png')}
+              style={{width: 30, height: 30}}
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -660,10 +748,10 @@ const ScheduleScreen = () => {
             {/* Task Details */}
             {selectedTask && (
               <>
-                <Text style={styles.modalTitle}>{selectedTask.name}</Text> 
+                <Text style={styles.modalTitle}>{selectedTask.name}</Text>
                 <Text style={styles.detailText}>Priority: {
-                  selectedTask.priority == 4 ? <Text>High</Text> : 
-                  (selectedTask.priority == 5 ? <Text>Medium</Text> : 
+                  selectedTask.priority == 4 ? <Text>High</Text> :
+                  (selectedTask.priority == 5 ? <Text>Medium</Text> :
                   <Text>Low</Text>)
                 }</Text>
                 <Text style={styles.detailText}>Start Time: {new Date(selectedTask.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</Text>
@@ -688,13 +776,53 @@ const ScheduleScreen = () => {
         </View>
       </Modal>
 
+      {/* Overflow Folder Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={overflowModalVisible}
+        onRequestClose={() => setOverflowModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            {/* Exit */}
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.button, styles.exitButton]}
+                onPress={() => setOverflowModalVisible(false) }
+              >
+                <Text style={styles.buttonText}>X</Text>
+              </TouchableOpacity>
+            </View>
+            {/* Title */}
+            <Text style={styles.modalTitle}>{"Overflow Folder"}</Text>
+            {/* Overflow List */}
+              <View style={{justifyContent: 'center', height: 400, width: '100%'}}>
+                <ScrollView
+                  scrollEnabled={true}
+                >
+                  <View style={{ flex: 1, flexDirection: 'column'}}>
+                    {tasks.map((task) => (
+                        <OverflowCard key={task.id} taskId={task.id} style={{height: 20}}>
+                          <Text style={styles.taskText}>
+                            {task.name}
+                          </Text>
+                        </OverflowCard>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Tab Selection */}
       <View style={styles.tabContainer}>
-        <TouchableOpacity style={[styles.tab, selectedTab === "Full Day" && styles.activeTab]} 
+        <TouchableOpacity style={[styles.tab, selectedTab === "Full Day" && styles.activeTab]}
         onPress={() => [setTimeSlots(generateTimeSlots(0)), setSelectedTab("Full Day")]}>
           <Text style={[styles.tabText, selectedTab === "Full Day" && styles.activeTabText]}>Full Day</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.tab, selectedTab === "Half Day" && styles.activeTab]} 
+        <TouchableOpacity style={[styles.tab, selectedTab === "Half Day" && styles.activeTab]}
         onPress={() => [setTimeSlots(generateTimeSlots(givenHalfTime)), setSelectedTab("Half Day")]}>
           <Text style={[styles.tabText, selectedTab === "Half Day" && styles.activeTabText]}>Half Day</Text>
         </TouchableOpacity>
@@ -703,13 +831,11 @@ const ScheduleScreen = () => {
       {/* Current Date */}
       <Text style={styles.dateText}>{formattedDate}</Text>
 
-
-
       <View style={styles.container}>
         {/* Container ScrollView */}
         <ScrollView contentContainerStyle={styles.scrollContainer} scrollEventThrottle={16} style={{height: '100%'}}>
           <View style={{ flexDirection: "row", position: "relative" }}>
-            
+
             {/* Time Slots */}
             <ScrollView scrollEnabled={false} contentContainerStyle={styles.timeSlotContainer}>
               {timeSlots.map((time, index) => (
@@ -720,9 +846,9 @@ const ScheduleScreen = () => {
             </ScrollView>
 
             {/* Task Cards */}
-            <ScrollView 
-              scrollEnabled={false} 
-              contentContainerStyle={styles.taskCardContainer} 
+            <ScrollView
+              scrollEnabled={false}
+              contentContainerStyle={styles.taskCardContainer}
               style={styles.taskOverlay}
             >
               <View style={{ flex: 1, flexDirection: 'column'}}>
@@ -731,9 +857,10 @@ const ScheduleScreen = () => {
                     if (selectedTab === "Half Day") {
                       const taskStart = task.start.getHours();
                       return taskStart >= givenHalfTime;
+                    } else {
+                      return true;
                     }
-                    return true;
-                  }) 
+                  })
                   .map((task) => (
                     <Card key={task.id} taskId={task.id}>
                       <Text style={task.complete ? [styles.taskText, { opacity: 0.2 }] : styles.taskText}>
@@ -842,9 +969,8 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
     width: '100%',
   },
-  //lesgo
   timeSlot: {
-    borderBottomWidth: 1,
+    borderBottomWidth: 2,
     borderBottomColor: "#FF7F50",
     height: 150,
     marginTop: 10,
@@ -876,6 +1002,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
+    zIndex: 6,
   },
   modalContainer: {
     width: "80%",
@@ -884,6 +1011,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     elevation: 5,
+    zIndex: 6,
   },
   modalTitle: {
     fontSize: 18,
@@ -905,7 +1033,7 @@ const styles = StyleSheet.create({
   },
   exitButton: {
     backgroundColor: "#FF6347",
-    height: 30, 
+    height: 30,
     flex: 1,
     marginLeft: 230,
     borderRadius: 5,
@@ -926,11 +1054,11 @@ const styles = StyleSheet.create({
   },
   priorityButton: {
     backgroundColor: "white",
-    height: 40, 
+    height: 40,
     flex: 1,
     borderRadius: 5,
     marginHorizontal: 10,
-  }, 
+  },
   selectedPriority: {
     borderColor: 'green',
     borderWidth: 2,
@@ -963,27 +1091,29 @@ const styles = StyleSheet.create({
     height: 100,
   },
   taskContainer: {
-    position: 'relative', 
-    left: 0, 
-    right: 0, 
+    position: 'relative',
+    left: 0,
+    right: 0,
   },
   taskCard: {
     backgroundColor: '#f0eded',
     margin: 3,
-    paddingLeft: 15, 
-    paddingTop: 15, 
+    paddingLeft: 5,
+    //paddingTop: 0,
     position: 'relative',
+    borderColor: '#d9d1d1',
+    borderWidth: 1,
   },
   taskCardContainer: {
-    position: "relative", 
-    top: 0, 
-    left: 0, 
-    right: 0, 
+    position: "relative",
+    top: 0,
+    left: 0,
+    right: 0,
   },
   taskOverlay: {
-    position: 'absolute', 
+    position: 'absolute',
     width: '100%',
-    zIndex: 5, 
+    zIndex: 5,
   },
   leftAction: {
     flex: 1,
@@ -999,9 +1129,9 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   completeText: {
-    color: 'green', 
+    color: 'green',
     fontSize: 20,
-  },  
+  },
   taskText: {
     color: 'black',
   },
@@ -1010,12 +1140,19 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   priorityMark: {
-    position: 'absolute', 
-    right: 10, 
+    position: 'absolute',
+    right: 10,
     fontSize: 30,
-    paddingRight: 15, 
-    paddingTop: 10, 
+    paddingRight: 15,
+    paddingTop: 10,
     fontWeight: 'bold',
+  },
+  trashIcon: {
+    position: 'absolute',
+    right: 10,
+    paddingRight: 15,
+    paddingTop: 10,
+    zIndex: 7,
   },
 });
 

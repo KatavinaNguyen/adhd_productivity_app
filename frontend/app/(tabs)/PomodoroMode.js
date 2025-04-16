@@ -1,28 +1,35 @@
 import { useRouter } from 'expo-router';
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const PomodoroMode = () => {
-  const pomodoroMin = .25; // Work duration (25 minutes)
-  const breakMin = .05; // Break duration (5 minutes)
+  const router = useRouter();
 
-  const [isPomodoro, setIsPomodoro] = useState(true); // Work mode = true, Break mode = false
-  const [timer, setTimer] = useState(pomodoroMin * 60); // Timer in seconds
+  const pomodoroMin = 0.25;
+  const breakMin = 0.05;
+
+  const [isPomodoro, setIsPomodoro] = useState(true);
+  const [timer, setTimer] = useState(pomodoroMin * 60);
   const [isRunning, setIsRunning] = useState(false);
+
+  const isPomodoroRef = useRef(isPomodoro);
+  isPomodoroRef.current = isPomodoro; // keep the ref in sync
 
   useEffect(() => {
     let interval;
+
     if (isRunning && timer > 0) {
       interval = setInterval(() => {
         setTimer((prev) => prev - 1);
       }, 1000);
-    } else if (timer === 0) {
-      // When timer hits 0, switch modes automatically
-      setIsPomodoro((prevMode) => !prevMode); // Toggle mode
-      setTimer(isPomodoro ? breakMin * 60 : pomodoroMin * 60); // Reset timer to the appropriate mode
+    } else if (isRunning && timer === 0) {
+      const nextMode = !isPomodoroRef.current;
+      setIsPomodoro(nextMode);
+      setTimer(nextMode ? pomodoroMin * 60 : breakMin * 60);
     }
+
     return () => clearInterval(interval);
-  }, [isRunning, timer, isPomodoro]);
+  }, [isRunning, timer]);
 
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
@@ -42,6 +49,9 @@ const PomodoroMode = () => {
   const switchMode = (mode) => {
     setIsPomodoro(mode);
     setTimer(mode ? pomodoroMin * 60 : breakMin * 60);
+
+    // if the timer is running, keep it running after switch
+    setIsRunning((prev) => prev);
   };
 
   return (
@@ -60,12 +70,11 @@ const PomodoroMode = () => {
       <View style={styles.timerContainer}>
         <Text style={styles.timerText}>{formatTime(timer)}</Text>
 
-        {/* Mode Switch (only visible when timer is stopped) */}
+        {/* Mode Switch (now works even if running) */}
         <View style={styles.modeSwitch}>
           <TouchableOpacity
             style={[styles.modeButton, isPomodoro ? styles.activeMode : styles.inactiveMode]}
-            onPress={() => switchMode(true)} // Switch to Pomodoro
-            disabled={isRunning} // Disable if timer is running
+            onPress={() => switchMode(true)}
           >
             <Text
               style={[styles.modeText, isPomodoro ? styles.activeModeText : styles.inactiveModeText]}
@@ -75,8 +84,7 @@ const PomodoroMode = () => {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.modeButton, !isPomodoro ? styles.activeMode : styles.inactiveMode]}
-            onPress={() => switchMode(false)} // Switch to Break
-            disabled={isRunning} // Disable if timer is running
+            onPress={() => switchMode(false)}
           >
             <Text
               style={[styles.modeText, !isPomodoro ? styles.activeModeText : styles.inactiveModeText]}
@@ -104,7 +112,6 @@ const PomodoroMode = () => {
     </View>
   );
 };
-
 
 // Styles
 const styles = StyleSheet.create({

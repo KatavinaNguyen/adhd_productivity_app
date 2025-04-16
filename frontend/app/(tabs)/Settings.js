@@ -1,192 +1,139 @@
 import React, { useState } from "react";
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { useRouter } from 'expo-router';
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Switch,
+  Alert,
+} from "react-native";
+import { useRouter } from "expo-router";
 
 const Settings = () => {
   const router = useRouter();
+  const [pushEnabled, setPushEnabled] = useState(true);
 
-  const [accountOpen, setAccountOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
-  // Add new section
+  const handleLogout = () => {
+    Alert.alert("Logged out", "You have been logged out.");
+  };
 
-  // Animated values for accordion expansion
-  const accountHeight = useState(new Animated.Value(0))[0];
-  const notificationsHeight = useState(new Animated.Value(0))[0];
-  const helpHeight = useState(new Animated.Value(0))[0];
-  // Add new section value
+  const handleHelp = () => {
+    Alert.alert(
+      "Help & Support",
+      "For support, feedback, or questions:\n\n📧 support@tinytasks.com\n\n🌐 tinytasks.com"
+    );
+  };
 
-  const toggleAccordion = (section: string) => {
-    let heightValue = 0;
-    let stateSetter = () => {};
-
-    switch (section) {
-      case "account":
-        heightValue = accountOpen ? 0 : 100; // Height when expanded
-        stateSetter = () => setAccountOpen((prev) => !prev);
-        Animated.timing(accountHeight, {
-          toValue: heightValue,
-          duration: 300,
-          useNativeDriver: false,
-        }).start();
-        break;
-      case "notifications":
-        heightValue = notificationsOpen ? 0 : 100;
-        stateSetter = () => setNotificationsOpen((prev) => !prev);
-        Animated.timing(notificationsHeight, {
-          toValue: heightValue,
-          duration: 300,
-          useNativeDriver: false,
-        }).start();
-        break;
-      case "help":
-        heightValue = helpOpen ? 0 : 100;
-        stateSetter = () => setHelpOpen((prev) => !prev);
-        Animated.timing(helpHeight, {
-          toValue: heightValue,
-          duration: 300,
-          useNativeDriver: false,
-        }).start();
-        break;
-       // Add copy for new section
-
-    }
-    stateSetter();
+  const handlePrivacy = () => {
+    Alert.alert(
+      "Privacy Policy",
+      "We respect your privacy. Your data is stored securely and never shared without your consent. For full details, visit tinytasks.com/privacy."
+    );
   };
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerText}>Settings</Text>
-      </View>
+      <Text style={styles.title}>Settings</Text>
 
-      {/* Settings List - Accordion */}
       <View style={styles.section}>
-        {/* Account Section */}
-        <TouchableOpacity style={styles.listButton} onPress={() => toggleAccordion("account")}>
-          <Text style={styles.listText}>Account</Text>
-        </TouchableOpacity>
-        <Animated.View style={{ height: accountHeight, overflow: "hidden" }}>
-          <View style={styles.accordionContent}>
-            <Text style={styles.accordionText}>Account Settings Content</Text>
-          </View>
-        </Animated.View>
+        <View style={styles.row}>
+          <Text style={styles.label}>Push Notifications</Text>
+          <Switch
+            value={pushEnabled}
+            onValueChange={setPushEnabled}
+            thumbColor={pushEnabled ? "#FF7F50" : "#ccc"}
+            trackColor={{ false: "#eee", true: "#FFDAB9" }}
+          />
+        </View>
 
-        {/* Notifications Section */}
-        <TouchableOpacity style={styles.listButton} onPress={() => toggleAccordion("notifications")}>
-          <Text style={styles.listText}>Manage Notifications</Text>
+        <TouchableOpacity style={styles.optionButton} onPress={handleHelp}>
+          <Text style={styles.optionText}>Help</Text>
         </TouchableOpacity>
-        <Animated.View style={{ height: notificationsHeight, overflow: "hidden" }}>
-          <View style={styles.accordionContent}>
-            <Text style={styles.accordionText}>Notifications Settings Content</Text>
-          </View>
-        </Animated.View>
 
-        {/* Help Section */}
-        <TouchableOpacity style={styles.listButton} onPress={() => toggleAccordion("help")}>
-          <Text style={styles.listText}>Help</Text>
+        <TouchableOpacity style={styles.optionButton} onPress={handlePrivacy}>
+          <Text style={styles.optionText}>Privacy</Text>
         </TouchableOpacity>
-        <Animated.View style={{ height: helpHeight, overflow: "hidden" }}>
-          <View style={styles.accordionContent}>
-            <Text style={styles.accordionText}>Help Content</Text>
-          </View>
-        </Animated.View>
       </View>
 
-      {/* Home Button */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => router.push("/ScheduleScreen")}
-        >
-          <Text style={styles.actionButtonText}>Return to Dashboard</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <Text style={styles.logoutText}>Log Out</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.dashboardButton} onPress={() => router.push("/ScheduleScreen")}>
+        <Text style={styles.dashboardText}>Return to Dashboard</Text>
+      </TouchableOpacity>
     </View>
   );
 };
 
-// Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFBEA",
-    paddingTop: 40,
-    paddingHorizontal: 16,
+    paddingTop: 50,
+    paddingHorizontal: 20,
   },
-  header: {
-    backgroundColor: "#FF7F50",
-    paddingVertical: 15,
-    borderRadius: 10,
-    alignItems: "center",
-    marginBottom: 30,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  headerText: {
-    fontSize: 24,
-    color: "#FFF",
+  title: {
+    fontSize: 26,
     fontWeight: "bold",
+    color: "#333",
+    marginBottom: 30,
+    textAlign: "center",
   },
   section: {
     backgroundColor: "#FFF",
     borderRadius: 12,
     padding: 20,
-    marginBottom: 30,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 5,
     elevation: 3,
   },
-  listButton: {
-    backgroundColor: "#333",
-    paddingVertical: 18,
-    borderRadius: 10,
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    marginBottom: 20,
   },
-  listText: {
-    fontSize: 18,
-    color: "#FFF",
-    fontWeight: "500",
-  },
-  accordionContent: {
-    backgroundColor: "#FFE5B4",
-    borderRadius: 10,
-    padding: 10,
-    marginTop: 10,
-    elevation: 2,
-  },
-  accordionText: {
-    fontSize: 16,
+  label: {
+    fontSize: 17,
     color: "#333",
   },
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
+  optionButton: {
+    backgroundColor: "#F3F3F3",
+    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    marginBottom: 15,
   },
-  actionButton: {
-    backgroundColor: "#FF7F50",
-    paddingVertical: 15,
-    paddingHorizontal: 25,
+  optionText: {
+    fontSize: 16,
+    color: "#444",
+    fontWeight: "500",
+  },
+  logoutButton: {
+    marginTop: 30,
+    backgroundColor: "#3d3d3d",
     borderRadius: 10,
+    paddingVertical: 16,
     alignItems: "center",
-    width: "80%",
-    marginBottom: 20,
-    elevation: 5,
   },
-  actionButtonText: {
-    fontSize: 18,
+  logoutText: {
     color: "#FFF",
+    fontSize: 17,
+    fontWeight: "bold",
+  },
+  dashboardButton: {
+    marginTop: 20,
+    backgroundColor: "#FF7F50",
+    borderRadius: 10,
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  dashboardText: {
+    color: "#FFF",
+    fontSize: 17,
     fontWeight: "bold",
   },
 });

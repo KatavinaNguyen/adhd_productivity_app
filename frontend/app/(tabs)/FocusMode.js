@@ -1,41 +1,72 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useState, useRef } from "react";
+import { Animated, StyleSheet, Text, TouchableOpacity, View, Image } from "react-native";
 import { useRouter } from "expo-router";
+import { Ionicons } from '@expo/vector-icons';
 
 const FocusMode = () => {
   const router = useRouter();
 
-  // State for task and display
-  const [task, setTask] = useState("homework 1");
-  const [showGreatText, setShowGreatText] = useState(false);
+  const tasks = ['Submit HW2', 'Do laundry', 'Group Project Meeting', 'Study for midterm'];
+  const motivators = ["GREAT!", "Keep going!", "You got this!", "Focus mode ON", "Nice work!"];
 
-  // Animation for rotating clock-like circle
-  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const [taskIndex, setTaskIndex] = useState(0);
+  const [showMotivator, setShowMotivator] = useState(false);
+  const [motivatorText, setMotivatorText] = useState("GREAT!");
 
-  // Function to handle "Finished!" button press
+  const scaleAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const flipAnim = useRef(new Animated.Value(0)).current;
+
+  const rotateY = flipAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: ['0deg', '180deg', '0deg'],
+  });
+
   const handleFinished = () => {
-    setShowGreatText(true); // Show "GREAT" text
+    const randomMotivator = motivators[Math.floor(Math.random() * motivators.length)];
+    setMotivatorText(randomMotivator);
+    setShowMotivator(true);
+
+    scaleAnim.setValue(0);
+    fadeAnim.setValue(0);
+    flipAnim.setValue(0);
+
+    Animated.parallel([
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.timing(flipAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
     setTimeout(() => {
-      setShowGreatText(false); // Hide "GREAT" text after 2 sec
-      setTask("homework 1"); // Reload the task - dummy value homework 1
+      setShowMotivator(false);
+      slideAnim.setValue(-300);
+      setTaskIndex((prev) => {
+        const nextIndex = (prev + 1) % tasks.length;
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+          speed: 12,
+          bounciness: 12,
+        }).start();
+        return nextIndex;
+      });
     }, 2000);
   };
-
-  // Rotate animation to simulate clock hands
-  useEffect(() => {
-    Animated.loop(
-      Animated.timing(rotateAnim, {
-        toValue: 1,
-        duration: 1000, // 1 sec rotation
-        useNativeDriver: true,
-      })
-    ).start();
-  }, [rotateAnim]);
-
-  const rotateInterpolation = rotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0deg", "360deg"],
-  });
 
   return (
     <View style={styles.container}>
@@ -51,32 +82,49 @@ const FocusMode = () => {
 
       {/* Motivational Banner */}
       <View style={styles.banner}>
-        {/* Show "GREAT" only when the button is clicked */}
-        {showGreatText && <Text style={styles.greatText}>GREAT</Text>}
+        {showMotivator && (
+          <Animated.Text
+            style={[
+              styles.greatText,
+              {
+                transform: [{ scale: scaleAnim }, { rotateY: rotateY }],
+                opacity: fadeAnim,
+                backfaceVisibility: 'hidden',
+                position: 'absolute',
+                top: 35,
+              },
+            ]}
+          >
+            {motivatorText}
+          </Animated.Text>
+        )}
 
-        {/* Rotating Circle */}
-        <Animated.View
-          style={[styles.clockContainer, { transform: [{ rotate: rotateInterpolation }] }]}
-        >
-          <View style={styles.clockHand} />
+        {/* Hamster GIF */}
+        <Image
+          source={require("assets/images/hamstergif.gif")}
+          style={styles.gifStyle}
+        />
+
+        {/* Sliding Task Text */}
+        <Animated.View style={{ transform: [{ translateX: slideAnim }] }}>
+          <Text style={styles.taskText}>{tasks[taskIndex]}</Text>
         </Animated.View>
-
-        <Text style={styles.taskText}>{task}</Text> {/* Display current task */}
-
       </View>
 
       {/* Buttons */}
       <TouchableOpacity style={styles.finishedButton} onPress={handleFinished}>
         <Text style={styles.buttonText}>Finished!</Text>
       </TouchableOpacity>
+
+      {/* Exit Button */}
       <TouchableOpacity style={styles.exitButton} onPress={() => router.push("/ScheduleScreen")}>
+        <Ionicons name="exit-outline" size={24} color="#FFF" />
         <Text style={styles.exitButtonText}>Exit</Text>
       </TouchableOpacity>
     </View>
   );
 };
 
-// Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -87,7 +135,7 @@ const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginBottom: 20,
+    marginBottom: 30,
   },
   tab: {
     paddingVertical: 12,
@@ -95,7 +143,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFEFD5",
     borderRadius: 25,
     marginHorizontal: 10,
-    elevation: 2,
+    elevation: 5,
   },
   activeTab: {
     backgroundColor: "#FF7F50",
@@ -111,64 +159,40 @@ const styles = StyleSheet.create({
   },
   banner: {
     backgroundColor: "#FFD580",
-    borderRadius: 16,
-    padding: 30,
+    borderRadius: 8,
+    paddingTop: 80,
+    paddingBottom: 80,
+    paddingHorizontal: 30,
     alignItems: "center",
     marginBottom: 30,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  motivationalText: {
-    fontSize: 32,
+  greatText: {
+    fontSize: 30,
     fontWeight: "bold",
-    color: "#FF7F50",
-    marginBottom: 15,
+    color: "#447abd",
+    textAlign: "center",
   },
-  clockContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 6,
-    borderColor: "#FF7F50",
-    justifyContent: "center",
-    alignItems: "center",
+  gifStyle: {
+    width: 250,
+    height: 250,
+    borderRadius: 90,
     marginBottom: 20,
-    backgroundColor: "#FFF3E0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
-  },
-  clockHand: {
-    width: 4,
-    height: 50,
-    backgroundColor: "#FF7F50",
-    position: "absolute",
-    top: 15,
-    borderRadius: 2,
   },
   taskText: {
-    fontSize: 18,
+    fontSize: 22,
     color: "#333",
     backgroundColor: "#FFF",
-    paddingVertical: 8,
-    paddingHorizontal: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 35,
     borderRadius: 10,
     textAlign: "center",
     marginTop: 10,
     fontWeight: "500",
-  },
-  greatText: {
-    fontSize: 26,
-    fontWeight: "bold",
-    color: "#447abd",
-    marginTop: 10,
-    textAlign: "center",
-    animation: "fadeIn 2s ease-out",
   },
   finishedButton: {
     backgroundColor: "#FF7F50",
@@ -176,7 +200,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     marginBottom: 15,
-    elevation: 3,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   buttonText: {
     fontSize: 18,
@@ -184,16 +212,23 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   exitButton: {
+    flexDirection: "row",
     backgroundColor: "#333",
     paddingVertical: 15,
     borderRadius: 8,
     alignItems: "center",
-    elevation: 3,
+    justifyContent: "center",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   exitButtonText: {
     fontSize: 18,
     color: "#FFF",
     fontWeight: "bold",
+    marginLeft: 10,
   },
 });
 
