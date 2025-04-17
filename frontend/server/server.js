@@ -40,7 +40,7 @@ async function createEvent(accessToken, eventDetails) {
             }
         );
 
-        console.log("Full API Response:", response);
+        //console.log("Full API Response:", response);
 
         if (!response.ok) {
             try {

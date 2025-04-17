@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert, Modal, Pressable, TextInput, Touchable } from "react-native";
+import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert, Modal, Pressable, TextInput, Touchable } from "react-native";
 import { useRouter } from "expo-router";
 import DatePicker from 'react-native-date-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -52,7 +52,6 @@ const ScheduleScreen = () => {
 
   // Time Setting (dates in UTC)
   const today = new Date();
-  today.setHours(12,0,0,0);
   const [startTime, setStartTime] = useState(new Date(
     today.getFullYear(),
     today.getMonth(),
@@ -103,6 +102,8 @@ const ScheduleScreen = () => {
             
             //console.log("Loaded half-time:", newHalfTime);
           }
+          const replacedHalf = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12, 0, 0, 0);
+          setHalfTime(replacedHalf);
         } catch (error) {
           console.error("Error loading half-time: ", error);
         }
@@ -258,12 +259,12 @@ const ScheduleScreen = () => {
       tasksStorage.set(newTask.id, JSON.stringify(newTask));
       console.log("Task stored with id:", newTask.id);
       let taskDet = tasksStorage.getString(newTask.id)
-      console.log(JSON.parse(taskDet));
+      //console.log(JSON.parse(taskDet));
 
       const newTasks = [...tasks, newTask].sort((a,b) => new Date(a.start) - new Date(b.start));   
       setTasks(newTasks);
-      console.log(newTask);
-      console.log(newTasks);
+      //console.log(newTask);
+      //console.log(newTasks);
     } catch (error) {
       console.error("Error occurred: ", error);
     }
@@ -292,7 +293,7 @@ const ScheduleScreen = () => {
       // Local Address for Mac's: http://127.0.0.1:3000/google/calendar/schedule_event
       // const response = await fetch("http://10.0.2.2:3000/google/calendar/schedule_event", {
       const event = await createEvent(accessToken, eventDetails);
-      console.log("Event created:", event);
+      //console.log("Event created:", event);
       
       setTimeout(() => { }, 5000);
   
@@ -301,7 +302,7 @@ const ScheduleScreen = () => {
       console.error("Error creating event:", error);
       return null;
     }
-  };
+  };  
 
   const getColorID = (task) => {
     if (task.complete) {
@@ -596,11 +597,18 @@ const ScheduleScreen = () => {
                 topPosition = gapinMin * 2;
               }
             } else { // if previous + current task are different hours
-              topPosition = (gapinMin * 2) + gapinHrs * 40;
-              if (prevEnd.getMinutes() === 0 || taskStart.getMinutes() === 0) {
-                //topPosition += 40;
+              topPosition = (gapinMin * 2) + gapinHrs * 40;       
+              if (prevEnd == taskStart) {
+                topPosition += 40;
               }
-              if (prevEnd.getHours() != taskStart.getHours()) {
+              /*if (prevEnd.getHours() != taskStart.getHours()) {
+                //topPosition += 40;
+              }*/
+              if (prevEnd.getMinutes() == 0 || taskStart.getMinutes() == 0) {
+                topPosition += 40;
+              } //5:15 - 6:45 -> 7:36 - 8:00PM
+
+              if (gapinMin > 0 && prevEnd.getMinutes() !== 0 && taskStart.getMinutes() !== 0) {
                 topPosition += 40;
               }
             }
@@ -617,28 +625,36 @@ const ScheduleScreen = () => {
           const prevEnd = new Date(prevTask.end);
 
           const gapinMin = (taskStart - prevEnd) / (1000*60);
-          let gapinHrs = taskStart.getHours() - prevEnd.getHours();
+          let gapinHrs = (taskStart.getHours() - prevEnd.getHours());
           // Difference in hours is re-calculated if there's leftover minutes between the hours
-          if (gapinMin % 60 != 0) {
-            gapinHrs = gapinHrs - 1;
-          }    
+          if (gapinMin < 60) {
+            gapinHrs -= 1;
+            //topPosition += 40;
+          }
+           
           // If previous + current task end/start at the same HOUR
           if (taskStart.getHours() === prevEnd.getHours()) {
             // If the tasks are the same hour like XX:00 (aka the border) we need to add 40px
             if (prevEnd.getMinutes() == 0 || taskStart.getMinutes() == 0) {
-              topPosition = gapinMin * 2 + 40;
-            // If the tasks have the same hour BUT are not at the border
-            } else {
-              topPosition = gapinMin * 2;
-            }
-          } else { // if previous + current task are different hours
-            topPosition = (gapinMin * 2) + gapinHrs * 40;
-            if (prevEnd.getMinutes() === 0 || taskStart.getMinutes() === 0) {
-              //topPosition += 40;
-            }
-            if (prevEnd.getHours() != taskStart.getHours()) {
               topPosition += 40;
             }
+            topPosition += gapinMin * 2;
+          } else { // if previous + current task are different hours
+            topPosition = (gapinMin * 2) + gapinHrs * 40;       
+            if (prevEnd == taskStart) {
+              topPosition += 40;
+            }
+            /*if (prevEnd.getHours() != taskStart.getHours()) {
+              //topPosition += 40;
+            }*/
+            if (prevEnd.getMinutes() == 0 || taskStart.getMinutes() == 0) {
+              topPosition += 40;
+            } //5:15 - 6:45 -> 7:36 - 8:00PM
+
+            if (gapinMin > 0 && prevEnd.getMinutes() !== 0 && taskStart.getMinutes() !== 0) {
+              topPosition += 40;
+            }
+            
           }
         } else {
           topPosition = baseTop + (taskStart.getHours() * 160 + taskStart.getMinutes() * 2);
@@ -756,7 +772,7 @@ const ScheduleScreen = () => {
         animationType="slide"
         transparent={true}
         visible={modalVisible}
-        onRequestClose={() => resetTaskForm() /* heya */}
+        onRequestClose={() => resetTaskForm()}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
@@ -803,7 +819,7 @@ const ScheduleScreen = () => {
                 date={startTime}
                 mode="time"
                 //Once user clicks on endtime they CANNOT pick a time before the current one
-                minimumDate = {today}
+                minimumDate = {new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0)}
                 maximumDate = {new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 54, 0, 0)}
                 onConfirm={(selectedStartTime) => {
                   setStartPickerOpen(false);
@@ -1132,21 +1148,25 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 6,
-  },
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999, // Just in case
+  },  
   modalContainer: {
-    width: "80%",
+    width: "85%",
+    maxHeight: '90%',
     backgroundColor: "#FFFBEA",
     padding: 20,
     borderRadius: 10,
     alignItems: "center",
     elevation: 5,
-    zIndex: 6,
-  },
+  },  
   modalTitle: {
     fontSize: 18,
     fontWeight: "bold",
